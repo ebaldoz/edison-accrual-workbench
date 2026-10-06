@@ -38,6 +38,8 @@ function renderEmpty() {
   $("#nav-review").textContent = "";
   $("#ar-caption").textContent = "Import a workbook to calculate";
   $("#ap-caption").textContent = "Import a workbook to calculate";
+  $("#ready-caption").textContent = "Import a workbook to calculate";
+  $("#review-caption").textContent = "Import a workbook to calculate";
   $("#balance-state").textContent = "Awaiting import";
   $("#balance-state").className = "control pending";
   $("#accrual-count").textContent = "No workbook loaded";
@@ -63,6 +65,8 @@ function render() {
   $("#nav-review").textContent = result.totals.review;
   $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} customer / SKU accruals`;
   $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} uninvoiced receipt accrual(s)`;
+  $("#ready-caption").textContent = "No open review, or manually reviewed";
+  $("#review-caption").textContent = "Usage or invoice-matching exceptions";
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   const visible = filterAccruals(result.accruals, filters);

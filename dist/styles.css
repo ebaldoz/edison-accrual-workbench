@@ -226,6 +226,7 @@ table { min-width:56rem; }
 .export-actions > div { flex:1 1 14rem; min-width:0; }
 .export-actions p { margin:8px 0 0; font: .875rem/1.6 Helvetica,Arial,sans-serif; color:var(--muted); max-width:26rem; }
 button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; cursor:not-allowed; filter:none; }
+.header-actions .primary:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; }
 .control.pending { background:#292820; color:#d0c9ae; }
 #nav-review:empty { display:none; }
 .panel-foot button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; }
