@@ -16,7 +16,7 @@
     <button id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true" aria-controls="sidebar-nav" aria-label="Collapse sidebar" title="Collapse sidebar"><span aria-hidden="true" id="toggle-icon">«</span><span class="toggle-label">Collapse menu</span></button>
     <nav id="sidebar-nav" aria-label="Close navigation">
       <a class="active" href="#workspace" aria-label="Close workspace" title="Close workspace"><span class="nav-icon" aria-hidden="true">◫</span><span class="nav-label">Close workspace</span></a>
-      <a href="#review" aria-label="Review queue" title="Review queue"><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-label">Review queue</span><b id="nav-review">1</b></a>
+      <a href="#review" aria-label="Review queue" title="Review queue"><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-label">Review queue</span><b id="nav-review"></b></a>
       <a href="#journals" aria-label="Journal output" title="Journal output"><span class="nav-icon" aria-hidden="true">≡</span><span class="nav-label">Journal output</span></a>
       <a href="#controls" aria-label="Controls" title="Controls"><span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Controls</span></a>
     </nav>
@@ -31,47 +31,47 @@
       <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
         <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
-        <button id="run-close" class="primary" title="Recalculate the current dataset; no entries are posted">Run close</button>
+        <button id="run-close" class="primary" title="Import a workbook to enable Run close" disabled>Run close</button>
       </div>
     </header>
 
     <div id="import-error" class="error-banner" role="alert" hidden></div>
 
     <section id="workspace" class="run-banner">
-      <div class="run-copy"><span class="pulse"></span><div><strong id="run-state">Run controls passed</strong><small><span id="dataset-name">Anchor dataset</span> · Close 03/31/2026 · Reversal 04/01/2026</small></div></div>
-      <div id="balance-state" class="control good">Balanced</div>
+      <div class="run-copy"><span class="pulse"></span><div><strong id="run-state">Import workbook to begin</strong><small><span id="dataset-name">No workbook loaded</span> · Close 03/31/2026 · Reversal 04/01/2026</small></div></div>
+      <div id="balance-state" class="control pending">Awaiting import</div>
     </section>
 
     <section class="metrics">
-      <article><span>UNBILLED REVENUE</span><strong id="ar-total">$362.50</strong><small id="ar-caption">3 customer / SKU accruals</small></article>
-      <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">$100,000.00</strong><small id="ap-caption">1 uninvoiced receipt accrual</small></article>
-      <article><span>READY</span><strong id="ready-total">3</strong><small>No open review, or manually reviewed</small></article>
-      <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">1</strong><small>Usage or invoice-matching exceptions</small></article>
+      <article><span>UNBILLED REVENUE</span><strong id="ar-total">—</strong><small id="ar-caption">Import a workbook to calculate</small></article>
+      <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">—</strong><small id="ap-caption">Import a workbook to calculate</small></article>
+      <article><span>READY</span><strong id="ready-total">—</strong><small>No open review, or manually reviewed</small></article>
+      <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">—</strong><small>Usage or invoice-matching exceptions</small></article>
     </section>
 
     <section id="journals" class="panel">
-      <div class="panel-head"><div><p class="eyebrow">CALCULATED OUTPUT</p><h2>Accruals</h2></div><span id="accrual-count" class="count" role="status">4 accruals</span></div>
+      <div class="panel-head"><div><p class="eyebrow">CALCULATED OUTPUT</p><h2>Accruals</h2></div><span id="accrual-count" class="count" role="status">No workbook loaded</span></div>
       <div class="accrual-filters" role="group" aria-label="Filter accruals" aria-describedby="filter-help">
-        <label class="filter-field filter-counterparty" for="filter-counterparty"><span class="sr-only">Search counterparties</span><input id="filter-counterparty" type="search" placeholder="Search counterparties…" autocomplete="off" spellcheck="false" aria-describedby="counterparty-help" /></label>
+        <label class="filter-field filter-counterparty" for="filter-counterparty"><span class="sr-only">Search counterparties</span><input id="filter-counterparty" type="search" placeholder="Search counterparties…" autocomplete="off" spellcheck="false" aria-describedby="counterparty-help" disabled /></label>
         <span id="counterparty-help" class="sr-only">Type any part of a customer or vendor name to filter accruals as you type.</span>
-        <label class="filter-field" for="filter-side"><span class="sr-only">Side</span><span class="filter-select"><select id="filter-side"><option value="">All sides</option><option value="AR">AR</option><option value="AP">AP</option></select></span></label>
-        <label class="filter-field" for="filter-status"><span class="sr-only">Status</span><span class="filter-select"><select id="filter-status"><option value="">All statuses</option><option value="READY">Ready</option><option value="REVIEW">Review</option></select></span></label>
-        <label class="filter-field" for="filter-handler"><span class="sr-only">Handler</span><span class="filter-select"><select id="filter-handler"><option value="">All handlers</option><option value="AR_USAGE">Usage accrual</option><option value="AP_GRNI">GR not invoiced</option></select></span></label>
-        <div class="filter-footer"><p id="filter-help">Filters change the table only. Totals, review queue, and download checks always cover the full dataset.</p><button id="clear-filters" type="button">Clear filters <span aria-hidden="true">↗</span></button></div>
+        <label class="filter-field" for="filter-side"><span class="sr-only">Side</span><span class="filter-select"><select id="filter-side" disabled><option value="">All sides</option><option value="AR">AR</option><option value="AP">AP</option></select></span></label>
+        <label class="filter-field" for="filter-status"><span class="sr-only">Status</span><span class="filter-select"><select id="filter-status" disabled><option value="">All statuses</option><option value="READY">Ready</option><option value="REVIEW">Review</option></select></span></label>
+        <label class="filter-field" for="filter-handler"><span class="sr-only">Handler</span><span class="filter-select"><select id="filter-handler" disabled><option value="">All handlers</option><option value="AR_USAGE">Usage accrual</option><option value="AP_GRNI">GR not invoiced</option></select></span></label>
+        <div class="filter-footer"><p id="filter-help">Filters change the table only. Totals, review queue, and download checks always cover the full dataset.</p><button id="clear-filters" type="button" disabled>Clear filters <span aria-hidden="true">↗</span></button></div>
       </div>
       <div class="table-wrap" role="region" aria-label="Accruals table, scroll horizontally for all columns" tabindex="0">
         <table>
           <caption class="sr-only">Calculated accruals and review status</caption>
           <thead><tr><th scope="col">Side</th><th scope="col">Counterparty / basis</th><th scope="col"><span class="column-heading">Handler<button type="button" class="info-button" data-help="handler" aria-label="About Handler values" aria-haspopup="dialog" aria-controls="column-help"><span aria-hidden="true">i</span></button></span></th><th scope="col" class="amount">Amount (USD)</th><th scope="col"><span class="column-heading">Status<button type="button" class="info-button" data-help="status" aria-label="About Status values and Review calculation" aria-haspopup="dialog" aria-controls="column-help"><span aria-hidden="true">i</span></button></span></th><th scope="col">Details</th></tr></thead>
-          <tbody id="accrual-body"></tbody>
+          <tbody id="accrual-body"><tr><td colspan="6" class="empty">Import an XLSX workbook to see accruals.</td></tr></tbody>
         </table>
       </div>
-      <div class="panel-foot"><span>Each side can be downloaded only when every accrual on that side is Ready. Downloads include the full side, not just filtered rows. One monthly journal ID, line-level audit references, MM/DD/YYYY dates, and no reversal rows. No entries are posted.</span><div class="export-actions" role="group" aria-label="Download journals by accrual type"><div><button id="export-ar-csv" disabled aria-describedby="export-ar-reason">Download AR CSV ↓</button><p id="export-ar-reason" role="status">Checking AR readiness…</p></div><div><button id="export-ap-csv" disabled aria-describedby="export-ap-reason">Download AP CSV ↓</button><p id="export-ap-reason" role="status">Checking AP readiness…</p></div></div></div>
+      <div class="panel-foot"><span>Each side can be downloaded only when every accrual on that side is Ready. Downloads include the full side, not just filtered rows. One monthly journal ID, line-level audit references, MM/DD/YYYY dates, and no reversal rows. No entries are posted.</span><div class="export-actions" role="group" aria-label="Download journals by accrual type"><div><button id="export-ar-csv" disabled aria-describedby="export-ar-reason">Download AR CSV ↓</button><p id="export-ar-reason" role="status">Import a workbook before downloading.</p></div><div><button id="export-ap-csv" disabled aria-describedby="export-ap-reason">Download AP CSV ↓</button><p id="export-ap-reason" role="status">Import a workbook before downloading.</p></div></div></div>
     </section>
 
     <section id="review" class="review-section">
       <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Usage flags can be reviewed and approved. AP matching issues require corrected source data and reimport. Approvals reset on refresh, Run close, or workbook import.</p></div>
-      <div id="review-list"></div>
+      <div id="review-list"><div class="empty">Import an XLSX workbook to see review items.</div></div>
     </section>
 
     <section id="controls" class="architecture">

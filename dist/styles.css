@@ -226,6 +226,8 @@ table { min-width:56rem; }
 .export-actions > div { flex:1 1 14rem; min-width:0; }
 .export-actions p { margin:8px 0 0; font: .875rem/1.6 Helvetica,Arial,sans-serif; color:var(--muted); max-width:26rem; }
 button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; cursor:not-allowed; filter:none; }
+.control.pending { background:#292820; color:#d0c9ae; }
+#nav-review:empty { display:none; }
 .panel-foot button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; }
 /* Lambda careers-style filters; native selects retain keyboard and screen-reader support. */
 .accrual-filters { display:grid; grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr); gap:20px; padding:30px 22px 18px; background:var(--paper); border-bottom:1px solid var(--line); align-items:end; }

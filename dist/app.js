@@ -1,12 +1,11 @@
-import { anchorData } from "./anchor-data.js";
 import { AccrualEngine, toJournalCsv, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
 import { filterAccruals, reviewAccrual } from "./review.js";
 
 const engine = new AccrualEngine();
-let data = anchorData;
+let data = null;
 let result;
 let selectedId = null;
-let datasetName = "Anchor dataset";
+let datasetName = "No workbook loaded";
 const filters = { side: "", counterparty: "", status: "", handler: "" };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -18,6 +17,7 @@ function escapeHtml(value) {
 }
 
 function runClose() {
+  if (!data) return;
   result = engine.run(data, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
   selectedId = null;
   $("#detail-panel").classList.remove("open");
@@ -28,10 +28,34 @@ function runClose() {
   $("#run-state").textContent = "Calculation complete — no entries posted";
   $("#dataset-name").textContent = datasetName;
   $("#import-error").hidden = true;
+  $("#run-close").disabled = false;
+  $("#run-close").title = "Recalculate the imported workbook; no entries are posted";
   render();
 }
 
+function renderEmpty() {
+  for (const id of ["ar-total", "ap-total", "ready-total", "review-total"]) $(`#${id}`).textContent = "—";
+  $("#nav-review").textContent = "";
+  $("#ar-caption").textContent = "Import a workbook to calculate";
+  $("#ap-caption").textContent = "Import a workbook to calculate";
+  $("#balance-state").textContent = "Awaiting import";
+  $("#balance-state").className = "control pending";
+  $("#accrual-count").textContent = "No workbook loaded";
+  $("#accrual-body").innerHTML = '<tr><td colspan="6" class="empty">Import an XLSX workbook to see accruals.</td></tr>';
+  $("#review-list").innerHTML = '<div class="empty">Import an XLSX workbook to see review items.</div>';
+  for (const side of ["ar", "ap"]) {
+    $(`#export-${side}-csv`).disabled = true;
+    $(`#export-${side}-reason`).textContent = "Import a workbook before downloading.";
+  }
+  $("#run-close").disabled = true;
+  for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = true;
+  $("#clear-filters").disabled = true;
+}
+
 function render() {
+  if (!result) { renderEmpty(); return; }
+  for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = false;
+  $("#clear-filters").disabled = false;
   $("#ar-total").textContent = money.format(result.totals.ar);
   $("#ap-total").textContent = money.format(result.totals.ap);
   $("#ready-total").textContent = result.totals.ready;
@@ -226,6 +250,9 @@ $("#file-input").addEventListener("change", async (event) => {
   } catch (error) {
     $("#import-error").textContent = error.message;
     $("#import-error").hidden = false;
+  } finally {
+    // Permit selecting the same corrected file again without a page refresh.
+    event.target.value = "";
   }
 });
 
@@ -273,4 +300,4 @@ document.addEventListener("keydown", event => {
 });
 setSidebar(sidebarCollapsed);
 updateNavigation();
-runClose();
+renderEmpty();
