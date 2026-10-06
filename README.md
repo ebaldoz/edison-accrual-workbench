@@ -43,7 +43,7 @@ The implementation is static by design: this is a reviewable proof of concept, n
 - Usage after each customer's latest invoice period end through close is accrued.
 - The price book is USD-denominated. USD is the NetSuite posting currency. For the EUR customer, the UI derives a transaction-currency amount at 1.08 USD/EUR and retains the rate on every line.
 - The actual 25-hour spike remains in revenue; it is routed to review rather than smoothed.
-- AP accrues the goods receipt value only when no vendor invoice references the PO at close.
+- AP uses the receipt's stored USD value when no supplied vendor invoice references the PO. Invoice-date cutoffs, partial invoice allocation, and existing GL postings are not checked; see the AP production-readiness roadmap below.
 - The partial receipt is capitalized to account 1480 with an offset to accrued expenses 2150.
 
 ## AI / ML rationale
@@ -67,6 +67,34 @@ This static proof of concept fits Cloudflare Pages, Vercel, Netlify, or OpenAI S
 - Replace PO-level invoice matching with receipt/line-level three-way matching and quantity/value tolerances.
 - Add approvals, role-based access, immutable audit events, observability, retries, and reconciliation back from NetSuite.
 - Version handler logic and anomaly policies so every close is reproducible.
+
+## AP production-readiness roadmap
+
+**Planned work — not implemented in the prototype.** Before generating an additional AP accrual, determine what was received by the close, what was invoiced by the close, and what is already recorded in the general ledger (GL).
+
+### 1. Match partial invoices and respect the close date
+
+- **Today:** any supplied vendor invoice matching a PO excludes the entire PO, regardless of invoice amount, line, or date.
+- **Production:** match PO lines, receipt lines, and invoice lines; allocate partial invoices to the relevant receipts. Apply a controller-approved as-of-close policy using receipt dates, invoice dates, posting dates/periods, and valid transaction status. Flag ambiguous matches instead of silently excluding them.
+- **Example:** $100,000 received and $40,000 invoiced leaves $60,000 of uninvoiced receipt value to assess. An invoice dated after 03/31/2026 must not automatically eliminate the March accrual. Whether an additional journal is needed also depends on existing GL postings below.
+
+### 2. Validate the receipt value
+
+- **Today:** the handler trusts the receipt's stored USD value; it does not independently check received quantity against the PO unit price.
+- **Production:** reconcile received quantity × approved unit price to the stored receipt value, using consistent units of measure, governed FX, and documented treatment of discounts, freight, and taxes. Route missing data or differences beyond approved tolerances to Review.
+- **Example:** 2 racks × $50,000 = $100,000. A stored receipt value of $120,000 should produce a $20,000 exception, not an automatically Ready accrual.
+
+### 3. Check existing GL postings to prevent double counting
+
+- **Today:** the handler does not check whether NetSuite already recorded the receipt's asset/expense and accrued liability.
+- **Production:** reconcile receipt-level GL impact, matched bills, prior manual accruals, and reversals as of the close. Generate only the additional adjustment needed to reach the required balance. Use source-linked posting records and enforce duplicate prevention when rerunning a close.
+- **Example:** if the full required $100,000 receipt accrual is already recorded, the additional accrual is $0. If $60,000 remains uninvoiced but that balance is already in Accrued Purchases, do not accrue it again. Do not subtract the same invoice effect twice when reconciling invoice data and GL balances.
+
+### Release checks
+
+- Test partial invoices, invoices after the cutoff, multiple receipts per PO, cancellations/credits, quantity-price mismatches, and previously posted receipts.
+- Reconcile each proposed adjustment to source records and the GL; retain the calculation, exceptions, reviewer decision, and posting/reversal references.
+- Obtain controller approval for account mapping and the receipt-to-bill workflow, including whether an entry should reverse. Do not combine a reversing manual accrual with an already-posted receipt accrual for the same amount.
 
 ## Known limitations
 
