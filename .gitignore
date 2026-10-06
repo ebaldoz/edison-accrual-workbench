@@ -1,0 +1,4 @@
+.DS_Store
+node_modules/
+.openai/.site-source.json
+*.zip
