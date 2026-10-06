@@ -34,6 +34,7 @@ function runClose() {
 }
 
 function renderEmpty() {
+  $("#run-dot").className = "pulse pending";
   for (const id of ["ar-total", "ap-total", "ready-total", "review-total"]) $(`#${id}`).textContent = "—";
   $("#nav-review").textContent = "";
   $("#ar-caption").textContent = "Import a workbook to calculate";
@@ -56,6 +57,7 @@ function renderEmpty() {
 
 function render() {
   if (!result) { renderEmpty(); return; }
+  $("#run-dot").className = result.control.balanced ? "pulse good" : "pulse bad";
   for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = false;
   $("#clear-filters").disabled = false;
   $("#ar-total").textContent = money.format(result.totals.ar);

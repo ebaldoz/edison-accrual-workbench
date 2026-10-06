@@ -117,7 +117,9 @@ h3 { font:12px var(--mono); text-transform:uppercase; margin:26px 0 12px; }
 .error-banner { background:#331b23; color:#ffd3d3; border-color:#8c485e; border-radius:0; }
 .run-banner { background:#191916; border-color:var(--line); border-radius:0; padding:16px; gap:16px; }
 .run-copy { gap:13px; } .run-copy div { gap:6px; } .run-copy strong { font-weight:500; } .run-copy small { color:var(--muted); font:10px/1.6 var(--mono); }
-.pulse { width:6px; height:6px; flex:none; border-radius:0; background:#afca8a; box-shadow:0 0 0 4px #242a20; }
+.pulse { width:6px; height:6px; flex:none; border-radius:0; background:#aaa9a1; box-shadow:0 0 0 4px #2c2c29; }
+.pulse.good { background:#afca8a; box-shadow:0 0 0 4px #242a20; }
+.pulse.bad { background:#ff9ba8; box-shadow:0 0 0 4px #44212c; }
 .control { font:10px var(--mono); padding:6px 9px; border-radius:0; white-space:nowrap; } .control.good { background:#242d20; color:#c3d9ac; } .control.bad { background:#44212c; color:#ffc1ca; }
 .metrics { grid-template-columns:repeat(4,minmax(0,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); margin-bottom:24px; }
 .metrics article { background:#141413; border:0; border-radius:0; padding:22px 18px; min-height:140px; }
