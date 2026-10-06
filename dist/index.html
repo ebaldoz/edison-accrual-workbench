@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Controller-ready accrual workbench for unbilled usage and uninvoiced receipts." />
+  <title>Helix Accrual Workbench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">H</span><span>HELIX<span class="muted">/FIN</span></span></div>
+    <nav>
+      <a class="active" href="#workspace"><span>◫</span> Close workspace</a>
+      <a href="#review"><span>◇</span> Review queue <b id="nav-review">1</b></a>
+      <a href="#journals"><span>≡</span> Journal output</a>
+      <a href="#controls"><span>✓</span> Controls</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="environment"><i></i> Sandbox environment</div>
+      <div class="user"><span>EC</span><div><strong>Controller</strong><small>Finance Systems</small></div></div>
+    </div>
+  </aside>
+
+  <main>
+    <header>
+      <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
+      <div class="header-actions">
+        <label class="upload">Import workbook<input id="file-input" type="file" accept=".xlsx,.xls" /></label>
+        <button id="run-close" class="primary">Run close</button>
+      </div>
+    </header>
+
+    <div id="import-error" class="error-banner" hidden></div>
+
+    <section id="workspace" class="run-banner">
+      <div class="run-copy"><span class="pulse"></span><div><strong id="run-state">Run controls passed</strong><small><span id="dataset-name">Anchor dataset</span> · Close 31 Mar 2026 · Reversal 01 Apr 2026</small></div></div>
+      <div id="balance-state" class="control good">Balanced</div>
+    </section>
+
+    <section class="metrics">
+      <article><span>UNBILLED REVENUE</span><strong id="ar-total">$362.50</strong><small>3 customer / SKU accruals</small></article>
+      <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">$100,000.00</strong><small>2 of 5 server racks received</small></article>
+      <article><span>READY TO POST</span><strong id="ready-total">3</strong><small>Accruals passing controls</small></article>
+      <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">1</strong><small>Usage anomaly detected</small></article>
+    </section>
+
+    <section id="journals" class="panel">
+      <div class="panel-head"><div><p class="eyebrow">CALCULATED OUTPUT</p><h2>Accruals</h2></div><span id="accrual-count" class="count">4 accruals</span></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Side</th><th>Counterparty / basis</th><th>Handler</th><th class="amount">Amount (USD)</th><th>Status</th><th></th></tr></thead>
+          <tbody id="accrual-body"></tbody>
+        </table>
+      </div>
+      <div class="panel-foot"><span>Source-linked accrual and reversal lines use deterministic external IDs.</span><button id="export-csv">Export NetSuite CSV ↓</button></div>
+    </section>
+
+    <section id="review" class="review-section">
+      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Exceptions stay visible without changing the calculated amount.</p></div>
+      <div id="review-list"></div>
+    </section>
+
+    <section id="controls" class="architecture">
+      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Pluggable handlers.</h2><p>Each handler converts a source-specific event into the same accrual contract. Stable external IDs make reruns safe, while source references and reversing lines keep the output audit-ready.</p></div>
+      <div class="flow"><span>Workbook</span><b>→</b><span>Router</span><b>→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b>→</b><span>Journal CSV</span></div>
+    </section>
+  </main>
+
+  <div id="overlay" class="overlay"></div>
+  <aside id="detail-panel" class="detail-panel" aria-live="polite">
+    <button id="close-detail" class="close" aria-label="Close details">×</button>
+    <p class="eyebrow">SOURCE TRACE</p><h2 id="detail-title"></h2><p id="detail-subtitle" class="detail-id"></p>
+    <div id="detail-body"></div>
+  </aside>
+</body>
+</html>
