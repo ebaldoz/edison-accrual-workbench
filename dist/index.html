@@ -10,6 +10,7 @@
   <script type="module" src="./app.js"></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
   <aside class="sidebar" id="sidebar">
     <div class="brand"><span class="brand-mark">H</span><span class="brand-name">HELIX<span class="muted">/FIN</span></span></div>
     <button id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true" aria-controls="sidebar-nav" aria-label="Collapse sidebar" title="Collapse sidebar"><span aria-hidden="true" id="toggle-icon">«</span><span class="toggle-label">Collapse menu</span></button>
@@ -25,7 +26,7 @@
     </div>
   </aside>
 
-  <main>
+  <main id="main-content" tabindex="-1">
     <header>
       <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
@@ -34,44 +35,95 @@
       </div>
     </header>
 
-    <div id="import-error" class="error-banner" hidden></div>
+    <div id="import-error" class="error-banner" role="alert" hidden></div>
 
     <section id="workspace" class="run-banner">
-      <div class="run-copy"><span class="pulse"></span><div><strong id="run-state">Run controls passed</strong><small><span id="dataset-name">Anchor dataset</span> · Close 31 Mar 2026 · Reversal 01 Apr 2026</small></div></div>
+      <div class="run-copy"><span class="pulse"></span><div><strong id="run-state">Run controls passed</strong><small><span id="dataset-name">Anchor dataset</span> · Close 03/31/2026 · Reversal 04/01/2026</small></div></div>
       <div id="balance-state" class="control good">Balanced</div>
     </section>
 
     <section class="metrics">
       <article><span>UNBILLED REVENUE</span><strong id="ar-total">$362.50</strong><small id="ar-caption">3 customer / SKU accruals</small></article>
       <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">$100,000.00</strong><small id="ap-caption">1 uninvoiced receipt accrual</small></article>
-      <article><span>NO REVIEW FLAGS</span><strong id="ready-total">3</strong><small>Calculated without an anomaly flag</small></article>
-      <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">1</strong><small>Usage anomaly detected</small></article>
+      <article><span>READY</span><strong id="ready-total">3</strong><small>No open review, or manually reviewed</small></article>
+      <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">1</strong><small>Usage or invoice-matching exceptions</small></article>
     </section>
 
     <section id="journals" class="panel">
-      <div class="panel-head"><div><p class="eyebrow">CALCULATED OUTPUT</p><h2>Accruals</h2></div><span id="accrual-count" class="count">4 accruals</span></div>
-      <div class="table-wrap">
+      <div class="panel-head"><div><p class="eyebrow">CALCULATED OUTPUT</p><h2>Accruals</h2></div><span id="accrual-count" class="count" role="status">4 accruals</span></div>
+      <div class="accrual-filters" role="group" aria-label="Filter accruals" aria-describedby="filter-help">
+        <label class="filter-field filter-counterparty" for="filter-counterparty"><span class="sr-only">Search counterparties</span><input id="filter-counterparty" type="search" placeholder="Search counterparties…" autocomplete="off" spellcheck="false" aria-describedby="counterparty-help" /></label>
+        <span id="counterparty-help" class="sr-only">Type any part of a customer or vendor name to filter accruals as you type.</span>
+        <label class="filter-field" for="filter-side"><span class="sr-only">Side</span><span class="filter-select"><select id="filter-side"><option value="">All sides</option><option value="AR">AR</option><option value="AP">AP</option></select></span></label>
+        <label class="filter-field" for="filter-status"><span class="sr-only">Status</span><span class="filter-select"><select id="filter-status"><option value="">All statuses</option><option value="READY">Ready</option><option value="REVIEW">Review</option></select></span></label>
+        <label class="filter-field" for="filter-handler"><span class="sr-only">Handler</span><span class="filter-select"><select id="filter-handler"><option value="">All handlers</option><option value="AR_USAGE">Usage accrual</option><option value="AP_GRNI">GR not invoiced</option></select></span></label>
+        <div class="filter-footer"><p id="filter-help">Filters change the table only. Totals, review queue, and download checks always cover the full dataset.</p><button id="clear-filters" type="button">Clear filters <span aria-hidden="true">↗</span></button></div>
+      </div>
+      <div class="table-wrap" role="region" aria-label="Accruals table, scroll horizontally for all columns" tabindex="0">
         <table>
-          <thead><tr><th>Side</th><th>Counterparty / basis</th><th>Handler</th><th class="amount">Amount (USD)</th><th>Status</th><th></th></tr></thead>
+          <caption class="sr-only">Calculated accruals and review status</caption>
+          <thead><tr><th scope="col">Side</th><th scope="col">Counterparty / basis</th><th scope="col"><span class="column-heading">Handler<button type="button" class="info-button" data-help="handler" aria-label="About Handler values" aria-haspopup="dialog" aria-controls="column-help"><span aria-hidden="true">i</span></button></span></th><th scope="col" class="amount">Amount (USD)</th><th scope="col"><span class="column-heading">Status<button type="button" class="info-button" data-help="status" aria-label="About Status values and Review calculation" aria-haspopup="dialog" aria-controls="column-help"><span aria-hidden="true">i</span></button></span></th><th scope="col">Details</th></tr></thead>
           <tbody id="accrual-body"></tbody>
         </table>
       </div>
-      <div class="panel-foot"><span>Export includes all accruals, including review items, and their reversals. No entries are posted.</span><button id="export-csv">Export journal CSV ↓</button></div>
+      <div class="panel-foot"><span>Each side can be downloaded only when every accrual on that side is Ready. Downloads include the full side, not just filtered rows. One monthly journal ID, line-level audit references, MM/DD/YYYY dates, and no reversal rows. No entries are posted.</span><div class="export-actions" role="group" aria-label="Download journals by accrual type"><div><button id="export-ar-csv" disabled aria-describedby="export-ar-reason">Download AR CSV ↓</button><p id="export-ar-reason" role="status">Checking AR readiness…</p></div><div><button id="export-ap-csv" disabled aria-describedby="export-ap-reason">Download AP CSV ↓</button><p id="export-ap-reason" role="status">Checking AP readiness…</p></div></div></div>
     </section>
 
     <section id="review" class="review-section">
-      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Exceptions stay visible without changing the calculated amount.</p></div>
+      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Usage flags can be reviewed and approved. AP matching issues require corrected source data and reimport. Approvals reset on refresh, Run close, or workbook import.</p></div>
       <div id="review-list"></div>
     </section>
 
     <section id="controls" class="architecture">
-      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Two accrual types.</h2><p>Usage and receipt handlers share journal formatting, source references, and reversing entries. Stable external IDs identify repeated accruals. Duplicate prevention must be enforced by the posting system; this demo only calculates and exports.</p></div>
+      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Two accrual types.</h2><p>Separate AR and AP CSVs contain original accrual lines under one external ID per month and side. Each row retains a unique line ID, an accrual ID linking its debit/credit pair, and source references. Duplicate prevention and reversal processing must be handled by the posting system; this demo only calculates and exports.</p></div>
       <div class="flow"><span>Workbook</span><b>→</b><span>Router</span><b>→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b>→</b><span>Journal CSV</span></div>
     </section>
   </main>
 
+  <dialog id="column-help" class="column-help" aria-labelledby="column-help-title">
+    <div class="help-heading"><h2 id="column-help-title" tabindex="-1"></h2><button id="close-help" class="close" type="button" aria-label="Close column information">×</button></div>
+    <section id="handler-help" hidden>
+      <p>A handler is the calculation rule used to generate an accrual.</p>
+      <h3>Usage accrual <code>AR_USAGE</code></h3>
+      <p>AR: unbilled customer usage. For each customer and SKU, add usage after the latest invoice’s billing period end through the close date. Multiply that quantity by the SKU’s USD unit price, then round to two decimal places.</p>
+      <p class="help-formula">Accrual (USD) = eligible usage quantity × USD unit price</p>
+      <p>Creates a debit to 1310 — Accrued Revenue and a credit to 4010 — Compute Services Revenue. Unusual usage can trigger Review.</p>
+      <h3>GR not invoiced <code>AP_GRNI</code></h3>
+      <p>AP: the uninvoiced portion of each receipt through close. Match invoices dated on or before close by receipt_id, or by PO/PO line only when there is one unambiguous receipt. A PO-only match also requires a single-line PO. Partial invoices reduce only their matched receipt. Fully invoiced receipts generate no accrual.</p>
+      <p class="help-formula">Accrual (USD) = stored receipt value − matched invoice USD amounts through close</p>
+      <p>Example: $100,000 received − $40,000 matched invoices = $60,000 uninvoiced. An invoice dated after close does not reduce this close’s accrual. Approved, posted, paid, and open invoices are eligible; void/cancelled/rejected invoices are ignored. Other or missing statuses need Review.</p>
+      <p>Creates a debit to the PO’s GL account and a credit to 2150 — Accrued Expenses — AP. Clean positive residuals start Ready. Ambiguous matches, missing invoice dates/amounts/IDs, duplicate allocations, vendor mismatches, or over-invoicing trigger Review and block AP download.</p>
+      <p class="help-note">Remaining limitations: receipt value is still taken from value_usd, not independently recalculated from quantity × price. The cutoff uses invoice_date, not GL posting date. Existing GL accruals, credits/returns, and foreign-currency conversion are not reconciled. AP calculations use supplied USD values. Do not post without checking for an existing receipt/GL accrual.</p>
+    </section>
+    <section id="status-help" hidden>
+      <h3><span class="status ready">Ready</span></h3>
+      <p>No open review flag, or a reviewer has checked a usage flag and marked it Ready. AR starts Ready if no usage event triggers the rule below; AP starts Ready only when its invoice matching has no unresolved issues. Ready does not mean posted, independently audited, or necessarily manually approved.</p>
+      <h3><span class="status review">Review</span></h3>
+      <p>An AR usage event met the anomaly rule, an AP receipt has an invoice-matching issue, or a previously approved review was reopened. One flagged usage event puts the entire customer/SKU accrual into Review.</p>
+      <h3>AP Review calculation and resolution</h3>
+      <p>Start with receipt value and subtract only unambiguous, valid invoice allocations dated through close. If an invoice cannot be safely allocated, the remaining displayed amount is provisional and stays in Review. If matched invoices exceed the receipt value, display zero and retain a Review exception; never silently remove it. There is no AP percentage anomaly threshold.</p>
+      <p>Open View for the exact issue. Correct the invoice date, status, vendor, amount, or receipt/PO-line reference in the workbook and import it again. If one invoice covers several receipts, supply separate allocation rows with unique invoice_line_ref values and allocated_amount_usd for each receipt; never repeat its full subtotal. AP matching issues cannot be bypassed with Mark Ready.</p>
+      <h3>How the anomaly is calculated</h3>
+      <ol>
+        <li>Find the customer’s invoice with the latest billing period end.</li>
+        <li>For the same customer and SKU, collect supplied usage events on or before that period end.</li>
+        <li>Calculate the baseline: total historical quantity ÷ number of historical events. This is an average per event, not a daily average or forecast.</li>
+        <li>Calculate the threshold: baseline × 2.</li>
+        <li>Check each unbilled event after the billing period end through the close date. If any event’s quantity is greater than or equal to the threshold, flag Review. The comparison uses quantities, not dollars or the total accrual quantity.</li>
+      </ol>
+      <p class="help-formula">Review when any eligible event quantity ≥ 2 × historical average quantity</p>
+      <h3>Example: Acme Robotics</h3>
+      <p>Historical usage: 10 hours across 1 event → baseline = 10 ÷ 1 = 10 hours. Threshold = 10 × 2 = 20 hours. The 03/30/2026 event has 25 hours, so 25 ≥ 20 triggers Review. Exactly 20 hours would also trigger it.</p>
+      <p>The full actual usage remains accrued: (10 + 25 + 10) × $4.50 = $202.50. Review does not remove the flagged event or reduce the amount.</p>
+      <p class="help-note">This fixed 2× multiplier is a prototype rule in the code—not a workbook setting or a statistically validated policy. The sample has only one historical event per customer/SKU. With no historical events, this rule does not flag an anomaly; a zero baseline produces a zero threshold.</p>
+      <h3>What to do next</h3>
+      <p>Open the item’s View details, verify its source records and amount, enter your reviewer name and review note, confirm the check, then select Mark Ready. If the source is wrong, correct the workbook and import it again. Approval changes the status, not the amount.</p>
+      <p>Every accrual on a side must be Ready before that side’s CSV can be downloaded—even if filters hide an item. Review decisions last only for the current run and reset on refresh, Run close, or a successful workbook import.</p>
+    </section>
+  </dialog>
+
   <div id="overlay" class="overlay"></div>
-  <aside id="detail-panel" class="detail-panel" aria-live="polite">
+  <aside id="detail-panel" class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="detail-title" inert>
     <button id="close-detail" class="close" aria-label="Close details">×</button>
     <p class="eyebrow">SOURCE TRACE</p><h2 id="detail-title"></h2><p id="detail-subtitle" class="detail-id"></p>
     <div id="detail-body"></div>

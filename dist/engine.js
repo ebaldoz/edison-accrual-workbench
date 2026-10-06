@@ -1,3 +1,5 @@
+import { reconcileReceipts } from "./ap-matching.js";
+
 const REQUIRED_SHEETS = [
   "customers",
   "sku_price_book",
@@ -23,6 +25,15 @@ const isoDate = (value) => {
 
 const compact = (value) => String(value).replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+// Keep ISO dates inside the engine; format only display/export values, without timezone conversion.
+export function formatOutputDate(value, field = "date") {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "") || !Number.isFinite(Date.parse(`${value}T00:00:00Z`)) || new Date(`${value}T00:00:00Z`).toISOString().slice(0, 10) !== value) {
+    throw new Error(`Missing or invalid ${field}`);
+  }
+  const [year, month, day] = value.split("-");
+  return `${month}/${day}/${year}`;
+}
+
 export function validateDataset(sheets) {
   const missing = REQUIRED_SHEETS.filter((name) => !Array.isArray(sheets[name]));
   if (missing.length) throw new Error(`Missing required sheets: ${missing.join(", ")}`);
@@ -41,9 +52,16 @@ function latestInvoiceByCustomer(invoices) {
 }
 
 function makeLines({ id, closeDate, reversalDate, debit, credit, amount, currencyAmount, currency, fx, memo, sourceRef, status, handler }) {
+  formatOutputDate(closeDate, "posting date");
+  formatOutputDate(reversalDate, "reversal date");
+  const side = { AR_USAGE: "AR", AP_GRNI: "AP" }[handler];
+  if (!side) throw new Error(`No journal side configured for ${handler}`);
   const common = {
-    external_id: id,
+    external_id: `HELIX-${closeDate.slice(0, 7)}-${side}`,
+    accrual_id: id,
     close_date: closeDate,
+    // Journal-header metadata, repeated identically on each flat-file line.
+    reversal_date: reversalDate,
     currency: "USD",
     transaction_currency: currency,
     transaction_amount: currencyAmount,
@@ -54,10 +72,8 @@ function makeLines({ id, closeDate, reversalDate, debit, credit, amount, currenc
     handler,
   };
   return [
-    { ...common, line_type: "accrual", posting_date: closeDate, account: debit, debit_usd: amount, credit_usd: 0 },
-    { ...common, line_type: "accrual", posting_date: closeDate, account: credit, debit_usd: 0, credit_usd: amount },
-    { ...common, line_type: "reversal", posting_date: reversalDate, account: credit, debit_usd: amount, credit_usd: 0 },
-    { ...common, line_type: "reversal", posting_date: reversalDate, account: debit, debit_usd: 0, credit_usd: amount },
+    { ...common, line_id: `${id}-DR`, line_type: "accrual", posting_date: closeDate, account: debit, debit_usd: amount, credit_usd: 0 },
+    { ...common, line_id: `${id}-CR`, line_type: "accrual", posting_date: closeDate, account: credit, debit_usd: 0, credit_usd: amount },
   ];
 }
 
@@ -139,33 +155,34 @@ export class ReceiptAccrualHandler {
   canHandle(kind) { return kind === this.key; }
 
   calculate(sheets, context) {
-    const poById = new Map(sheets.purchase_orders.map((row) => [row.po_number, row]));
     const vendorById = new Map(sheets.vendors.map((row) => [row.vendor_id, row]));
-    const invoicedPo = new Set(sheets.vendor_invoices.filter((row) => row.po_number).map((row) => row.po_number));
-    return sheets.goods_receipts
-      .filter((receipt) => isoDate(receipt.received_on) <= context.closeDate && !invoicedPo.has(receipt.po_number))
-      .map((receipt) => {
-        const po = poById.get(receipt.po_number);
-        if (!po) throw new Error(`Missing PO ${receipt.po_number}`);
+    return reconcileReceipts(sheets, context.closeDate)
+      .filter(record => record.residualCents > 0 || record.issues.length)
+      .map(({ receipt, po, receiptCents, invoicedCents, residualCents, matches, issues, invoiceExceptions }) => {
         const vendor = vendorById.get(po.vendor_id);
-        const usd = +asNumber(receipt.value_usd, "receipt value").toFixed(2);
-        const id = `HELIX-${compact(context.closeDate)}-AP-${compact(receipt.receipt_id)}`;
-        const sourceRef = `${receipt.receipt_id}|${receipt.po_number}|${receipt.po_line_ref}`;
+        const usd = residualCents / 100;
+        const multipleLines = sheets.goods_receipts.filter(row => row.receipt_id === receipt.receipt_id).length > 1;
+        const id = `HELIX-${compact(context.closeDate)}-AP-${compact(receipt.receipt_id)}${multipleLines ? `-${compact(receipt.po_number)}-${compact(receipt.po_line_ref)}` : ""}`;
+        const sourceRef = [receipt.receipt_id, receipt.po_number, receipt.po_line_ref, ...matches.map(row => `INV:${row.invoice_number}${row.invoice_line_ref ? `:${row.invoice_line_ref}` : ""}`)].join("|");
+        const status = issues.length ? "REVIEW" : "READY";
         return {
           id,
           handler: this.key,
           side: "AP",
           counterparty: vendor?.name || po.vendor_id,
           source: sourceRef,
-          description: `${receipt.received_qty} received on ${receipt.po_number} (${receipt.notes || "uninvoiced receipt"})`,
+          description: `${receipt.receipt_id} · ${receipt.po_number}/${receipt.po_line_ref} · ${matches.length ? "partially invoiced" : "uninvoiced receipt"}${issues.length ? " · provisional amount" : ""}`,
           amountUsd: usd,
           transactionAmount: usd,
-          transactionCurrency: po.currency || "USD",
+          transactionCurrency: "USD",
           fx: 1,
-          status: "READY",
+          status,
+          reviewBlocked: issues.length > 0,
+          reviewReasons: issues,
+          matching: { receiptValueUsd: receiptCents / 100, matchedInvoiceUsd: invoicedCents / 100, residualUsd: usd, provisional: issues.length > 0, invoices: matches },
           anomaly: null,
-          sourceDetail: receipt,
-          lines: makeLines({ id, closeDate: context.closeDate, reversalDate: context.reversalDate, debit: po.gl_account, credit: "2150", amount: usd, currencyAmount: usd, currency: po.currency || "USD", fx: 1, memo: `Uninvoiced receipt - ${receipt.po_number}`, sourceRef, status: "READY", handler: this.key }),
+          sourceDetail: { receipt, matchedInvoices: matches, invoiceExceptions, matchingIssues: issues, cutoffBasis: "invoice_date <= closeDate; no GL posting check" },
+          lines: makeLines({ id, closeDate: context.closeDate, reversalDate: context.reversalDate, debit: po.gl_account, credit: "2150", amount: usd, currencyAmount: usd, currency: "USD", fx: 1, memo: `Uninvoiced receipt - ${receipt.po_number}/${receipt.po_line_ref}`, sourceRef, status, handler: this.key }),
         };
       });
   }
@@ -210,8 +227,43 @@ export class AccrualEngine {
   }
 }
 
-export function toJournalCsv(lines) {
-  const columns = ["external_id", "line_type", "posting_date", "account", "debit_usd", "credit_usd", "currency", "transaction_currency", "transaction_amount", "fx_to_usd", "memo", "source_ref", "review_status", "handler"];
-  const quote = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
-  return [columns.join(","), ...lines.map((line) => columns.map((column) => quote(line[column])).join(","))].join("\n");
+export function getExportAvailability(lines, side) {
+  const handler = { AR: "AR_USAGE", AP: "AP_GRNI" }[side];
+  if (!handler || !["AR", "AP"].includes(side)) throw new Error("Choose AR or AP for the journal export.");
+  const selected = lines.filter(line => line.handler === handler && line.line_type === "accrual");
+  if (!selected.length) return { allowed: false, reason: `No ${side} accruals to download.` };
+  const pending = new Set(selected.filter(line => line.review_status !== "READY").map(line => line.accrual_id));
+  if (pending.size) return { allowed: false, reason: `${side} download locked: ${pending.size} accrual(s) are not Ready.` };
+  return { allowed: true, reason: `${side}: all accruals are Ready. Download includes the full side, regardless of filters.` };
+}
+
+export function toJournalCsv(lines, side) {
+  const availability = getExportAvailability(lines, side);
+  if (!availability.allowed) throw new Error(availability.reason);
+  const handler = { AR: "AR_USAGE", AP: "AP_GRNI" }[side];
+  // Never emit separate reversing entries, including from legacy line collections.
+  const selected = lines.filter(line => line.handler === handler && line.line_type === "accrual");
+  const headers = new Map();
+  const lineIds = new Set();
+  for (const line of selected) {
+    const date = line.reversal_date;
+    formatOutputDate(date, `reversal date for ${line.external_id}`);
+    formatOutputDate(line.posting_date, `posting date for ${line.external_id}`);
+    if (line.external_id !== `HELIX-${line.posting_date.slice(0, 7)}-${side}`) throw new Error("Journal external ID must match its month and side.");
+    if (!line.line_id || !line.accrual_id || !line.source_ref) throw new Error("Missing line-level audit references.");
+    if (lineIds.has(line.line_id)) throw new Error(`Duplicate audit line ID: ${line.line_id}`);
+    lineIds.add(line.line_id);
+    const header = JSON.stringify([line.posting_date, date, line.currency]);
+    if (headers.has(line.external_id) && headers.get(line.external_id) !== header) {
+      throw new Error(`Inconsistent journal header fields for ${line.external_id}`);
+    }
+    headers.set(line.external_id, header);
+  }
+  const columns = ["external_id", "line_id", "accrual_id", "line_type", "posting_date", "reversal_date", "account", "debit_usd", "credit_usd", "currency", "transaction_currency", "transaction_amount", "fx_to_usd", "memo", "source_ref", "review_status", "handler", "reviewed_by", "review_note", "reviewed_on", "reviewed_time_utc"];
+  const quote = (value) => {
+    // User-entered notes/names must remain literal text in spreadsheet software.
+    const text = typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value ?? "");
+    return `"${text.replaceAll('"', '""')}"`;
+  };
+  return [columns.join(","), ...selected.map((line) => columns.map((column) => quote(["posting_date", "reversal_date", "reviewed_on"].includes(column) && line[column] ? formatOutputDate(line[column]) : line[column])).join(","))].join("\n");
 }
