@@ -4,7 +4,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 
 ## What it does
 
-- Imports the supplied XLSX workbook or runs from the embedded anchor dataset.
+- Opens with no workbook or calculated results. Import the supplied XLSX workbook each time the page loads; successful import runs the close automatically.
 - Calculates usage-based AR for the unbilled period after the latest Chargebee invoice.
 - Converts the EUR customer's USD-valued usage to a transaction-currency view while booking the journal in USD.
 - Accrues each receipt's uninvoiced USD balance, subtracting valid matched invoices dated through close rather than excluding its entire PO.
@@ -17,7 +17,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Disables each side's download until every accrual line on that side is Ready. Empty sides are disabled too. This rule is also checked by the CSV formatter, not just the button.
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
 
-Anchor results: **AR $362.50** and **AP $100,000.00**.
+After importing the supplied anchor workbook, the expected results are **AR $362.50** and **AP $100,000.00**. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
 
 ## Run locally
 
@@ -28,7 +28,7 @@ npm test
 npm run serve
 ```
 
-Open `http://localhost:4173`, then run the embedded anchor or import the supplied workbook.
+Open `http://localhost:4173` and import the supplied workbook. Run close becomes available after a valid import. A refresh clears the in-browser workbook and results; import again to continue. The workbook is not saved to a database or browser storage.
 
 ## Architecture
 
