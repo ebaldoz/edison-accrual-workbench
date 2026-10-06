@@ -5,6 +5,7 @@ const engine = new AccrualEngine();
 let data = anchorData;
 let result;
 let selectedId = null;
+let datasetName = "Anchor dataset";
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
@@ -14,12 +15,11 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 }
 
-function runClose(fromImport = false) {
+function runClose() {
   result = engine.run(data, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
-  const prior = localStorage.getItem(result.runId);
-  localStorage.setItem(result.runId, JSON.stringify({ generatedAt: new Date().toISOString(), fingerprint: result.accruals.map((x) => x.id).join("|") }));
-  $("#run-state").textContent = prior ? "Re-run matched prior IDs — no duplicate posting" : "Run controls passed";
-  $("#dataset-name").textContent = fromImport ? "Imported workbook" : "Anchor dataset";
+  $("#run-state").textContent = "Calculation complete — no entries posted";
+  $("#dataset-name").textContent = datasetName;
+  $("#import-error").hidden = true;
   render();
 }
 
@@ -28,6 +28,9 @@ function render() {
   $("#ap-total").textContent = money.format(result.totals.ap);
   $("#ready-total").textContent = result.totals.ready;
   $("#review-total").textContent = result.totals.review;
+  $("#nav-review").textContent = result.totals.review;
+  $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} customer / SKU accruals`;
+  $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} uninvoiced receipt accrual(s)`;
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   $("#accrual-count").textContent = `${result.accruals.length} accruals`;
@@ -106,11 +109,18 @@ async function importWorkbook(file) {
     sheets[name] = window.XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: true });
   }
   validateDataset(sheets);
+  engine.run(sheets, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
   data = sheets;
-  runClose(true);
+  datasetName = file.name;
+  runClose();
 }
 
-$("#run-close").addEventListener("click", () => runClose(false));
+$("#run-close").addEventListener("click", () => {
+  try { runClose(); } catch (error) {
+    $("#import-error").textContent = error.message;
+    $("#import-error").hidden = false;
+  }
+});
 $("#export-csv").addEventListener("click", downloadCsv);
 $("#close-detail").addEventListener("click", closeDetail);
 $("#overlay").addEventListener("click", closeDetail);
@@ -125,4 +135,42 @@ $("#file-input").addEventListener("change", async (event) => {
   }
 });
 
-runClose(false);
+// A display preference only; this is not an accounting or posting ledger.
+let sidebarCollapsed = window.matchMedia("(max-width: 900px)").matches;
+try {
+  const preference = localStorage.getItem("helix.sidebar.collapsed");
+  if (preference !== null) sidebarCollapsed = preference === "true";
+} catch { /* The navigation remains usable when storage is unavailable. */ }
+function setSidebar(collapsed) {
+  sidebarCollapsed = collapsed;
+  document.body.classList.toggle("sidebar-collapsed", collapsed);
+  const label = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  $("#sidebar-toggle").setAttribute("aria-expanded", String(!collapsed));
+  $("#sidebar-toggle").setAttribute("aria-label", label);
+  $("#sidebar-toggle").title = label;
+  $("#toggle-icon").textContent = collapsed ? "»" : "«";
+  try { localStorage.setItem("helix.sidebar.collapsed", String(collapsed)); } catch { /* Optional preference. */ }
+}
+$("#sidebar-toggle").addEventListener("click", () => setSidebar(!sidebarCollapsed));
+function updateNavigation() {
+  const current = location.hash || "#workspace";
+  document.querySelectorAll("#sidebar-nav a").forEach(link => {
+    const active = link.getAttribute("href") === current;
+    link.classList.toggle("active", active);
+    if (active) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  });
+}
+document.querySelectorAll("#sidebar-nav a").forEach(link => link.addEventListener("click", () => {
+  if (window.matchMedia("(max-width: 680px)").matches) setSidebar(true);
+}));
+window.addEventListener("hashchange", updateNavigation);
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape") {
+    closeDetail();
+    if (window.matchMedia("(max-width: 680px)").matches) setSidebar(true);
+  }
+});
+setSidebar(sidebarCollapsed);
+updateNavigation();
+runClose();

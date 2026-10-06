@@ -5,25 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Controller-ready accrual workbench for unbilled usage and uninvoiced receipts." />
   <title>Helix Accrual Workbench</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   <script type="module" src="./app.js"></script>
 </head>
 <body>
-  <aside class="sidebar">
-    <div class="brand"><span class="brand-mark">H</span><span>HELIX<span class="muted">/FIN</span></span></div>
-    <nav>
-      <a class="active" href="#workspace"><span>◫</span> Close workspace</a>
-      <a href="#review"><span>◇</span> Review queue <b id="nav-review">1</b></a>
-      <a href="#journals"><span>≡</span> Journal output</a>
-      <a href="#controls"><span>✓</span> Controls</a>
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="brand-mark">H</span><span class="brand-name">HELIX<span class="muted">/FIN</span></span></div>
+    <button id="sidebar-toggle" class="sidebar-toggle" aria-expanded="true" aria-controls="sidebar-nav" aria-label="Collapse sidebar" title="Collapse sidebar"><span aria-hidden="true" id="toggle-icon">«</span><span class="toggle-label">Collapse menu</span></button>
+    <nav id="sidebar-nav" aria-label="Close navigation">
+      <a class="active" href="#workspace" aria-label="Close workspace" title="Close workspace"><span class="nav-icon" aria-hidden="true">◫</span><span class="nav-label">Close workspace</span></a>
+      <a href="#review" aria-label="Review queue" title="Review queue"><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-label">Review queue</span><b id="nav-review">1</b></a>
+      <a href="#journals" aria-label="Journal output" title="Journal output"><span class="nav-icon" aria-hidden="true">≡</span><span class="nav-label">Journal output</span></a>
+      <a href="#controls" aria-label="Controls" title="Controls"><span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Controls</span></a>
     </nav>
     <div class="sidebar-bottom">
       <div class="environment"><i></i> Sandbox environment</div>
-      <div class="user"><span>EC</span><div><strong>Controller</strong><small>Finance Systems</small></div></div>
+      <div class="user"><span>FC</span><div><strong>Controller view</strong><small>Demo workspace</small></div></div>
     </div>
   </aside>
 
@@ -31,8 +29,8 @@
     <header>
       <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
-        <label class="upload">Import workbook<input id="file-input" type="file" accept=".xlsx,.xls" /></label>
-        <button id="run-close" class="primary">Run close</button>
+        <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
+        <button id="run-close" class="primary" title="Recalculate the current dataset; no entries are posted">Run close</button>
       </div>
     </header>
 
@@ -44,9 +42,9 @@
     </section>
 
     <section class="metrics">
-      <article><span>UNBILLED REVENUE</span><strong id="ar-total">$362.50</strong><small>3 customer / SKU accruals</small></article>
-      <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">$100,000.00</strong><small>2 of 5 server racks received</small></article>
-      <article><span>READY TO POST</span><strong id="ready-total">3</strong><small>Accruals passing controls</small></article>
+      <article><span>UNBILLED REVENUE</span><strong id="ar-total">$362.50</strong><small id="ar-caption">3 customer / SKU accruals</small></article>
+      <article><span>UNINVOICED RECEIPTS</span><strong id="ap-total">$100,000.00</strong><small id="ap-caption">1 uninvoiced receipt accrual</small></article>
+      <article><span>NO REVIEW FLAGS</span><strong id="ready-total">3</strong><small>Calculated without an anomaly flag</small></article>
       <article class="review-metric"><span>NEEDS REVIEW</span><strong id="review-total">1</strong><small>Usage anomaly detected</small></article>
     </section>
 
@@ -58,7 +56,7 @@
           <tbody id="accrual-body"></tbody>
         </table>
       </div>
-      <div class="panel-foot"><span>Source-linked accrual and reversal lines use deterministic external IDs.</span><button id="export-csv">Export NetSuite CSV ↓</button></div>
+      <div class="panel-foot"><span>Export includes all accruals, including review items, and their reversals. No entries are posted.</span><button id="export-csv">Export journal CSV ↓</button></div>
     </section>
 
     <section id="review" class="review-section">
@@ -67,7 +65,7 @@
     </section>
 
     <section id="controls" class="architecture">
-      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Pluggable handlers.</h2><p>Each handler converts a source-specific event into the same accrual contract. Stable external IDs make reruns safe, while source references and reversing lines keep the output audit-ready.</p></div>
+      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Two accrual types.</h2><p>Usage and receipt handlers share journal formatting, source references, and reversing entries. Stable external IDs identify repeated accruals. Duplicate prevention must be enforced by the posting system; this demo only calculates and exports.</p></div>
       <div class="flow"><span>Workbook</span><b>→</b><span>Router</span><b>→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b>→</b><span>Journal CSV</span></div>
     </section>
   </main>
