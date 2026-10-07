@@ -20,7 +20,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
 - Opens the control-design explanation in a modal from the information button beside the import-status heading or from Controls in the sidebar.
 
-For the default March 2026 period, importing the supplied anchor workbook produces **AR $362.50** and **AP $100,000.00**. After selecting another period and importing a workbook, results may differ because that month's end is the calculation cutoff. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
+For the default March 2026 period, importing the supplied anchor workbook produces **AR $362.50** and **AP $100,000.00**. After selecting another period and importing a workbook, results may differ because that month's end is the calculation cutoff. Sample records for automated tests live in `tests/fixtures/anchor-data.js`, outside the deployable `dist/` directory; the website does not load them.
 
 ## Run locally
 
