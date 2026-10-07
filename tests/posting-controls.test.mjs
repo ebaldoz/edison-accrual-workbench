@@ -6,25 +6,27 @@ import { reviewAccrual } from "../dist/review.js";
 import { consumePostingControlledCsv, getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "../dist/posting-controls.js";
 
 const run = () => new AccrualEngine().run(structuredClone(anchorData));
-const evidence = { reviewer: "Controller A", evidence: "NetSuite saved search JE-42, GL reconciliation GR-2026-0042 as of 03/31/2026", externalIdAbsent: true, apGlNotRecorded: true };
+const evidence = { reviewer: "Controller A", evidence: "GL reconciliation GR-2026-0042 as of 03/31/2026", apGlNotRecorded: true };
 const checkedAt = new Date("2026-04-01T10:20:30Z");
 
-test("calculated AP stays proposed and download is locked until external-ID and GL checks", () => {
+test("calculated AP stays proposed and download is locked until the receipt/GL check", () => {
   const result = run();
   assert.equal(result.totals.ap, 100000);
   assert.equal(result.accruals.find(item => item.side === "AP").status, "READY");
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
   assert.match(getPostingAvailability(result, "AP").reason, /receipt\/GL/);
-  assert.throws(() => toPostingControlledCsv(result, "AP"), /export check required/);
+  assert.throws(() => toPostingControlledCsv(result, "AP"), /reconciliation required/);
   assert.equal(journalIdForSide(result, "AP"), "HELIX-2026-03-AP");
 });
 
-test("AP check requires evidence, absent external ID, and no already-recorded GL amount", () => {
+test("AP check requires evidence and no already-recorded GL amount, not a manual external-ID search", () => {
   const result = run();
   assert.throws(() => recordPostingCheck(result, "AP", { ...evidence, evidence: "" }), /evidence reference/);
-  assert.throws(() => recordPostingCheck(result, "AP", { ...evidence, externalIdAbsent: false }), /existing posted journal/);
   assert.throws(() => recordPostingCheck(result, "AP", { ...evidence, apGlNotRecorded: false }), /already recorded/);
+  assert.throws(() => recordPostingCheck(result, "AR", evidence), /Only AP/);
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
+  recordPostingCheck(result, "AP", evidence, checkedAt);
+  assert.equal(getPostingAvailability(result, "AP").allowed, true);
 });
 
 test("a recorded AP check unlocks export and puts its evidence on every CSV line", () => {
@@ -38,23 +40,25 @@ test("a recorded AP check unlocks export and puts its evidence on every CSV line
   assert.equal(csv.match(/"04\/01\/2026","10:20:30","Yes"/g)?.length, 2);
 });
 
-test("one pre-export check permits one download; a repeat needs a new NetSuite check", () => {
+test("one AP receipt/GL check permits one download; a repeat needs a fresh reconciliation", () => {
   const result = run();
   recordPostingCheck(result, "AP", evidence, checkedAt);
   assert.match(consumePostingControlledCsv(result, "AP"), /HELIX-2026-03-AP/);
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
-  assert.throws(() => consumePostingControlledCsv(result, "AP"), /export check required/);
+  assert.throws(() => consumePostingControlledCsv(result, "AP"), /reconciliation required/);
 });
 
-test("AR review must finish before an export check; both sides have distinct controls", () => {
+test("AR review must finish before download, but no manual export check is needed", () => {
   const result = run();
-  assert.throws(() => recordPostingCheck(result, "AR", evidence), /not Ready/);
+  assert.equal(getPostingAvailability(result, "AR").allowed, false);
   reviewAccrual(result, result.accruals.find(item => item.side === "AR" && item.status === "REVIEW").id,
     { reviewer: "Controller A", note: "Verified usage event", confirmed: true });
-  recordPostingCheck(result, "AR", { ...evidence, apGlNotRecorded: false }, checkedAt);
   assert.equal(getPostingAvailability(result, "AR").allowed, true);
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
-  assert.match(toPostingControlledCsv(result, "AR"), /HELIX-2026-03-AR/);
+  const first = consumePostingControlledCsv(result, "AR");
+  assert.match(first, /HELIX-2026-03-AR/);
+  assert.equal(consumePostingControlledCsv(result, "AR"), first);
+  assert.doesNotMatch(first, /"Controller A","GL reconciliation/);
 });
 
 test("changed journal evidence invalidates a prior check, and revocation relocks export", () => {
@@ -62,7 +66,7 @@ test("changed journal evidence invalidates a prior check, and revocation relocks
   recordPostingCheck(result, "AP", evidence, checkedAt);
   result.journalLines.find(line => line.side === "AP").debit_usd = 99999;
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
-  assert.throws(() => toPostingControlledCsv(result, "AP"), /export check required/);
+  assert.throws(() => toPostingControlledCsv(result, "AP"), /reconciliation required/);
   const fresh = run();
   recordPostingCheck(fresh, "AP", evidence, checkedAt);
   revokePostingCheck(fresh, "AP");
@@ -70,11 +74,11 @@ test("changed journal evidence invalidates a prior check, and revocation relocks
   assert.equal(getPostingAvailability(run(), "AP").allowed, false);
 });
 
-test("reopening a reviewed usage accrual invalidates its earlier AR export check", () => {
+test("reopening a reviewed usage accrual locks AR again", () => {
   const result = run();
   const item = result.accruals.find(accrual => accrual.side === "AR" && accrual.status === "REVIEW");
   reviewAccrual(result, item.id, { reviewer: "Controller A", note: "Verified usage", confirmed: true });
-  recordPostingCheck(result, "AR", evidence, checkedAt);
+  assert.equal(getPostingAvailability(result, "AR").allowed, true);
   reviewAccrual(result, item.id, { reviewer: "Controller A", note: "Need another source check", confirmed: true, action: "reopen" });
   assert.equal(getPostingAvailability(result, "AR").allowed, false);
   assert.throws(() => toPostingControlledCsv(result, "AR"), /not Ready/);
