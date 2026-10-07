@@ -1,7 +1,7 @@
 import { AccrualEngine, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
 import { filterAccruals, reviewAccrual } from "./review.js";
 import { MONTHS, periodDates, periodLabel } from "./period.js";
-import { consumePostingControlledCsv, getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck } from "./posting-controls.js";
+import { getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "./posting-controls.js";
 
 const engine = new AccrualEngine();
 let result;
@@ -229,7 +229,7 @@ function closeDetail() {
 
 function downloadCsv(side) {
   let csv;
-  try { csv = consumePostingControlledCsv(result, side); } catch (error) {
+  try { csv = toPostingControlledCsv(result, side); } catch (error) {
     $("#import-error").textContent = error.message;
     $("#import-error").hidden = false;
     return;

@@ -111,7 +111,7 @@
       <p id="posting-check-error" role="alert" hidden></p>
       <div class="posting-check-buttons"><button type="submit">Record check</button><button id="revoke-posting-check" type="button" hidden>Revoke prior check</button></div>
     </form>
-    <p class="help-note">This AP ledger check permits one download in the current calculation. A repeat download needs a fresh reconciliation. It does not prove a posting occurred. In NetSuite, map the monthly external ID and import as Add so a duplicate journal is rejected.</p>
+    <p class="help-note">This AP ledger check stays valid for the current AP journal, including repeat downloads of the same CSV. It resets if that journal changes, the workbook is reimported, the period changes, or the page refreshes; you can also revoke it. Downloading does not prove a posting occurred. In NetSuite, map the monthly external ID and import as Add so a duplicate journal is rejected.</p>
   </dialog>
 
   <dialog id="column-help" class="column-help" aria-labelledby="column-help-title">

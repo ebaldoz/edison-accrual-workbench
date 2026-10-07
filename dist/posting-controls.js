@@ -81,10 +81,3 @@ export function toPostingControlledCsv(result, side) {
   } : line);
   return toJournalCsv(checkedLines, side);
 }
-
-export function consumePostingControlledCsv(result, side) {
-  const csv = toPostingControlledCsv(result, side);
-  // A download is not proof of posting. Only AP's human GL check is one-use.
-  if (side === "AP") revokePostingCheck(result, side);
-  return csv;
-}
