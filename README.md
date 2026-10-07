@@ -31,6 +31,26 @@ npm run serve
 
 Open `http://localhost:4173` and import the supplied workbook. A valid import calculates the accruals immediately; to recalculate corrected source data, import the corrected workbook. A refresh clears the in-browser workbook and results; import again to continue. The workbook is not saved to a database or browser storage.
 
+## Import workbook requirements
+
+- Import **one Excel workbook** (`.xlsx` or `.xls`), not separate CSV files. The filename does not matter; `Helix_Anchor_Dataset_CANDIDATE.xlsx` is an example, not the only accepted file.
+- The workbook must contain the **nine worksheet names below exactly** (including case and underscores). Sheet order does not matter, and extra sheets are allowed. The sample's `gl_accounts` sheet is extra; the current calculations do not require or read it.
+- Keep the column headers used by the calculations exactly as shown. The table lists the key fields the app reads, not a complete validation schema; a missing or invalid value can make import fail or produce a Review exception. Other columns from the sample workbook may remain.
+
+| Worksheet | Key columns used by the current calculations |
+| --- | --- |
+| `customers` | `customer_id`, `name`, `currency` |
+| `sku_price_book` | `sku`, `unit`, `list_unit_price_usd` |
+| `usage_events` | `event_id`, `customer_id`, `sku`, `quantity`, `occurred_on` |
+| `chargebee_invoices` | `customer_id`, `period_end`, `fx_to_usd` |
+| `vendors` | `vendor_id`, `name` |
+| `purchase_orders` | `po_number`, `vendor_id`, `gl_account` |
+| `po_lines` | `po_number`, `po_line_ref` |
+| `goods_receipts` | `receipt_id`, `po_number`, `po_line_ref`, `received_on`, `value_usd` |
+| `vendor_invoices` | If populated: `invoice_number`, `vendor_id`, `invoice_date`, `status`, `subtotal_usd`, and a `po_number` or `receipt_id` reference. The receipt/PO-line allocation fields are described under [AP calculation and workbook fields](#ap-calculation-and-workbook-fields). |
+
+`vendor_invoices` must exist even when there are no vendor bills yet; it may have **zero data rows**. For AP dates, use real Excel dates or `YYYY-MM-DD` text. The browser app currently fixes the close date to **03/31/2026** and reversal date to **04/01/2026**; neither the filename nor a date inside the workbook changes those settings. A missing required sheet produces a “Missing required sheets” error. The import reads the file in the browser and does not save the workbook or approvals between refreshes.
+
 ## Architecture
 
 The browser app separates the close workflow into four layers:
