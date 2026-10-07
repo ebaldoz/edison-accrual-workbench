@@ -18,7 +18,7 @@
       <a class="active" href="#workspace" aria-label="Close workspace" title="Close workspace"><span class="nav-icon" aria-hidden="true">◫</span><span class="nav-label">Close workspace</span></a>
       <a href="#review" aria-label="Review queue" title="Review queue"><span class="nav-icon" aria-hidden="true">◇</span><span class="nav-label">Review queue</span><b id="nav-review"></b></a>
       <a href="#journals" aria-label="Journal output" title="Journal output"><span class="nav-icon" aria-hidden="true">≡</span><span class="nav-label">Journal output</span></a>
-      <a href="#controls" aria-label="Controls" title="Controls"><span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Controls</span></a>
+      <button id="nav-controls" class="nav-action" type="button" aria-label="Controls" aria-haspopup="dialog" aria-controls="controls-help" title="Controls"><span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Controls</span></button>
     </nav>
     <div class="sidebar-bottom">
       <div class="environment"><i></i> Sandbox environment</div>
@@ -31,6 +31,7 @@
       <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
         <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
+        <button id="import-info" class="info-button" type="button" aria-label="About importing and journal output" aria-haspopup="dialog" aria-controls="controls-help" title="About importing and journal output"><span aria-hidden="true">i</span></button>
       </div>
     </header>
 
@@ -73,11 +74,13 @@
       <div id="review-list"><div class="empty">Import an XLSX workbook to see review items.</div></div>
     </section>
 
-    <section id="controls" class="architecture">
-      <div><p class="eyebrow">CONTROL DESIGN</p><h2>One engine. Two accrual types.</h2><p>Separate AR and AP CSVs contain original accrual lines under one external ID per month and side. Each row retains a unique line ID, an accrual ID linking its debit/credit pair, and source references. Duplicate prevention and reversal processing must be handled by the posting system; this demo only calculates and exports.</p></div>
-      <div class="flow"><span>Workbook</span><b>→</b><span>Router</span><b>→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b>→</b><span>Journal CSV</span></div>
-    </section>
   </main>
+
+  <dialog id="controls-help" class="column-help controls-help" aria-labelledby="controls-help-title">
+    <div class="help-heading"><div><p class="eyebrow">CONTROL DESIGN</p><h2 id="controls-help-title" tabindex="-1">One engine. Two accrual types.</h2></div><button id="close-controls-help" class="close" type="button" aria-label="Close workflow information">×</button></div>
+    <p>Separate AR and AP CSVs contain original accrual lines under one external ID per month and side. Each row retains a unique line ID, an accrual ID linking its debit/credit pair, and source references. Duplicate prevention and reversal processing must be handled by the posting system; this demo only calculates and exports.</p>
+    <div class="flow modal-flow" role="img" aria-label="Workbook goes to the router, then to the AR usage or AP receipt calculation, which produces a journal CSV."><span>Workbook</span><b aria-hidden="true">→</b><span>Router</span><b aria-hidden="true">→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b aria-hidden="true">→</b><span>Journal CSV</span></div>
+  </dialog>
 
   <dialog id="column-help" class="column-help" aria-labelledby="column-help-title">
     <div class="help-heading"><h2 id="column-help-title" tabindex="-1"></h2><button id="close-help" class="close" type="button" aria-label="Close column information">×</button></div>

@@ -234,6 +234,23 @@ $("#column-help").addEventListener("close", () => helpOpener?.focus());
 $("#column-help").addEventListener("keydown", event => {
   if (event.key === "Escape") event.stopPropagation();
 });
+let controlsHelpOpener = null;
+function openControlsHelp(opener) {
+  controlsHelpOpener = opener;
+  $("#controls-help").showModal();
+  $("#controls-help").scrollTop = 0;
+  $("#controls-help-title").focus();
+}
+$("#import-info").addEventListener("click", event => openControlsHelp(event.currentTarget));
+$("#nav-controls").addEventListener("click", event => {
+  if (window.matchMedia("(max-width: 680px)").matches) setSidebar(true);
+  openControlsHelp(event.currentTarget);
+});
+$("#close-controls-help").addEventListener("click", () => $("#controls-help").close());
+$("#controls-help").addEventListener("close", () => controlsHelpOpener?.focus());
+$("#controls-help").addEventListener("keydown", event => {
+  if (event.key === "Escape") event.stopPropagation();
+});
 $("#file-input").addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
