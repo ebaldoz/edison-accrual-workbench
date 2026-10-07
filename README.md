@@ -37,10 +37,25 @@ The browser app separates the close workflow into four layers:
 
 1. **Workbook adapter** converts named XLSX sheets into arrays of records.
 2. **Accrual engine** validates inputs, selects registered handlers, and returns a common accrual contract.
-3. **Handlers** own source-specific accounting logic. `UsageAccrualHandler` and `ReceiptAccrualHandler` implement the required scenarios. A new handler only needs `canHandle()` and `calculate()`; the router, UI, journal formatter, and controls remain unchanged.
+3. **Handlers** own source-specific accounting logic. `UsageAccrualHandler` and `ReceiptAccrualHandler` implement the required scenarios. The engine can route to another registered handler, but the current export and UI also contain AR/AP-specific mappings; see below before adding a third type.
 4. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads.
 
 The implementation is static by design: this is a reviewable proof of concept, not a production posting service. Deterministic IDs demonstrate idempotent intent. A production implementation would enforce uniqueness in a database and in NetSuite's external-ID field.
+
+## Where to add or edit a handler
+
+- **Edit AR usage calculations:** `UsageAccrualHandler` in [`dist/engine.js`](dist/engine.js) selects unbilled events, groups by customer and SKU, calculates the amount, and flags usage anomalies.
+- **Edit AP receipt accruals:** `ReceiptAccrualHandler` in [`dist/engine.js`](dist/engine.js) turns uninvoiced receipt balances into accruals. Its invoice-to-receipt matching, cutoff, and residual-value rules live in [`dist/ap-matching.js`](dist/ap-matching.js), in `reconcileReceipts()`.
+
+To add a third accrual type (for example, an AP subscription accrual):
+
+1. Add a handler class beside the existing handlers in `dist/engine.js`. Give it a unique `key`, a `canHandle(kind)` method, and a `calculate(sheets, context)` method. Return an array of accrual objects using the same fields as the existing handlers, including a stable `id`, `handler`, `side`, `amountUsd`, `status`, source detail, and balanced debit/credit `lines`. Every journal line needs its source reference and the close/reversal dates. The existing `makeLines()` helper is private to this file; export or refactor it if you put the new class in another file.
+2. Register the class in `AccrualEngine`'s default `handlers` array and add its key to the default `selected` list in `run()`. Alternatively, pass both a custom handler list to the constructor and a matching `context.handlers` list to `run()`. The browser currently uses those defaults: `dist/app.js` creates `new AccrualEngine()` and calls `engine.run()` without selecting handlers.
+3. If the new type needs another worksheet, decide whether to add it to `REQUIRED_SHEETS` in `dist/engine.js`. `dist/app.js` already reads every named worksheet. Making a sheet required will cause imports of the original anchor workbook to fail, so keep it optional or supply an updated workbook if existing imports must continue to work.
+4. Wire the new key into the output and screen. `makeLines()` maps handler keys to AR/AP journal sides; `getExportAvailability()` and `toJournalCsv()` currently select only `AR_USAGE` or `AP_GRNI`, so a new handler's lines would otherwise be omitted from downloads. `dist/app.js` has fixed handler labels, review wording, filters, metrics, and AR/AP download controls. Update the relevant parts, especially if the new type has different review rules or introduces a new side.
+5. Add calculation and export tests in [`tests/engine.test.mjs`](tests/engine.test.mjs) or a new test file. Check the amount, source references, stable IDs, balanced lines, reversal date, Review/Ready behavior, and inclusion in the intended CSV. Run `npm test`.
+
+In short, the **routing** is pluggable, but adding a fully usable third type currently requires a few explicit output/UI changes. Those mappings would be natural candidates for a shared handler registry in a production version.
 
 ## Accounting assumptions
 
