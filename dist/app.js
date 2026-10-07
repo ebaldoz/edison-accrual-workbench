@@ -4,8 +4,6 @@ import { MONTHS, periodDates, periodLabel } from "./period.js";
 
 const engine = new AccrualEngine();
 let result;
-let importedSheets = null;
-let importedFilename = "";
 let selectedPeriod = { year: 2026, month: 3 };
 let selectedId = null;
 const filters = { side: "", counterparty: "", status: "", handler: "" };
@@ -63,6 +61,31 @@ function renderEmpty() {
   $("#clear-filters").disabled = true;
 }
 
+function clearImportedResult() {
+  result = undefined;
+  selectedId = null;
+  $("#detail-panel").classList.remove("open");
+  $("#overlay").classList.remove("show");
+  $("#detail-panel").inert = true;
+  $("#detail-body").replaceChildren();
+  $("#detail-title").textContent = "";
+  $("#detail-subtitle").textContent = "";
+  $("main").inert = false;
+  $("#sidebar").inert = false;
+  $("#file-input").value = "";
+  $("#run-state").textContent = "Import workbook to begin";
+  $("#dataset-name").textContent = "No workbook loaded";
+  $("#import-error").textContent = "";
+  $("#import-error").hidden = true;
+  $("#filter-handler").innerHTML = '<option value="">All handlers</option>';
+  $("#additional-handler-help").replaceChildren();
+  for (const key of Object.keys(filters)) {
+    filters[key] = "";
+    $(`#filter-${key}`).value = "";
+  }
+  renderEmpty();
+}
+
 function render() {
   if (!result) { renderEmpty(); return; }
   $("#run-dot").className = result.control.balanced ? "pulse good" : "pulse bad";
@@ -118,7 +141,7 @@ function reviewSection(item) {
       <p id="review-error" role="alert" hidden></p>
       <button class="review-submit" type="submit">${approved ? "Reopen review" : "Mark Ready"}</button>
     </form>
-    <p class="session-note">Current calculation only. Refresh, change period, or import a workbook again to reset approvals. Names are self-entered, not verified identities.</p>
+    <p class="session-note">Current calculation only. Changing period clears this workbook and its approvals; refresh or reimport also resets approvals. Names are self-entered, not verified identities.</p>
     ${history.length ? `<details><summary>Review history for this run (${history.length})</summary><ul>${history.map(event => `<li>${event.action === "approve" ? "Marked Ready" : "Reopened"} by ${escapeHtml(event.reviewer)} · ${formatOutputDate(event.reviewedAt.slice(0,10))} ${event.reviewedAt.slice(11,19)} UTC — ${escapeHtml(event.note)}</li>`).join("")}</ul></details>` : ""}
   </section>`;
 }
@@ -217,8 +240,6 @@ async function importWorkbook(file) {
   }
   validateDataset(sheets);
   const nextResult = engine.run(sheets, periodDates(selectedPeriod.year, selectedPeriod.month));
-  importedSheets = sheets;
-  importedFilename = file.name;
   result = nextResult;
   showImportedResult(file.name);
 }
@@ -248,13 +269,11 @@ function renderPeriodMonths() {
 function selectPeriod(month) {
   const year = Number($("#period-year").value);
   try {
-    const dates = periodDates(year, month);
+    periodDates(year, month);
     if (year !== selectedPeriod.year || month !== selectedPeriod.month) {
-      const nextResult = importedSheets ? engine.run(importedSheets, dates) : null;
       selectedPeriod = { year, month };
-      result = nextResult || result;
+      clearImportedResult();
       updatePeriodDisplay();
-      if (nextResult) showImportedResult(importedFilename);
     }
     $("#period-error").hidden = true;
     $("#period-picker").open = false;
@@ -394,4 +413,4 @@ document.addEventListener("keydown", event => {
 setSidebar(sidebarCollapsed);
 updateNavigation();
 updatePeriodDisplay();
-renderEmpty();
+clearImportedResult();

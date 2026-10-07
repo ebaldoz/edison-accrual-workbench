@@ -41,7 +41,7 @@
             </div>
             <div id="period-months" class="period-months" role="group" aria-label="Month"></div>
             <p id="period-error" class="period-error" role="alert" hidden></p>
-            <p id="period-note">Changing period reruns the imported workbook and resets review decisions.</p>
+            <p id="period-note">Changing period clears the imported workbook and results. Import a workbook for the selected month.</p>
           </div>
         </details>
         <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
@@ -83,7 +83,7 @@
     </section>
 
     <section id="review" class="review-section">
-      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Some flags can be reviewed and approved; source-correction issues require a corrected workbook and reimport. Approvals reset on refresh, period change, or workbook import.</p></div>
+      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Some flags can be reviewed and approved; source-correction issues require a corrected workbook and reimport. Changing period clears the workbook, results, and review decisions.</p></div>
       <div id="review-list"><div class="empty">Import an XLSX workbook to see review items.</div></div>
     </section>
 
@@ -134,7 +134,7 @@
       <p class="help-note">This fixed 2× multiplier is a prototype rule in the code—not a workbook setting or a statistically validated policy. The sample has only one historical event per customer/SKU. With no historical events, this rule does not flag an anomaly; a zero baseline produces a zero threshold.</p>
       <h3>What to do next</h3>
       <p>Open the item’s View details, verify its source records and amount, enter your reviewer name and review note, confirm the check, then select Mark Ready. If the source is wrong, correct the workbook and import it again. Approval changes the status, not the amount.</p>
-      <p>Every accrual on a side must be Ready before that side’s CSV can be downloaded—even if filters hide an item. Review decisions last only for the current import and reset on refresh or a successful workbook import.</p>
+      <p>Every accrual on a side must be Ready before that side’s CSV can be downloaded—even if filters hide an item. Review decisions last only for the current import and reset on refresh, a period change, or a successful workbook import.</p>
     </section>
   </dialog>
 
