@@ -24,14 +24,18 @@ For the default March 2026 period, importing the supplied anchor workbook produc
 
 ## Run locally
 
-No build step is required.
+To use the hosted app, open [Helix Accrual Workbench on GitHub Pages](https://ebaldoz.github.io/helix-accrual-workbench/). No local setup is needed. Import a workbook in the page; the browser processes it without uploading it to GitHub Pages, and a refresh starts with a blank workspace.
+
+To run the same site locally, install Node.js 22 (for the tests) and Python 3 (for the web server). From the repository root, run:
 
 ```bash
 npm test
 npm run serve
 ```
 
-Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Resolve any Review items. AR can then be downloaded; for AP, use **Check AP receipt / GL** and record the reconciliation before downloading. After a check is recorded, the button reads **View AP check**. Its dialog shows the checker, time, and evidence; **Recheck** explicitly replaces the check, while **Revoke check** locks AP download again. Repeat downloads do not require rechecking. Import the CSV in NetSuite using **Add**, with `external_id` mapped to Journal Entry External ID. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook, results, and AP check. The workbook is not saved to a database or browser storage.
+No build step or `npm install` is required. Leave the server running and open [http://localhost:4173](http://localhost:4173). An internet connection is needed to load the spreadsheet parser from jsDelivr. Local edits do not change the GitHub Pages site; the deployment workflow publishes changes to `dist/` after they reach `main` and its tests pass.
+
+On either site, choose the period to the left of Import workbook, then import the supplied workbook. A valid import calculates the accruals immediately. Resolve any Review items. AR can then be downloaded; for AP, use **Check AP receipt / GL** and record the reconciliation before downloading. After a check is recorded, the button reads **View AP check**. Its dialog shows the checker, time, and evidence; **Recheck** explicitly replaces the check, while **Revoke check** locks AP download again. Repeat downloads do not require rechecking. Import the CSV in NetSuite using **Add**, with `external_id` mapped to Journal Entry External ID. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook, results, and AP check. The workbook is not saved to a database or browser storage.
 
 ## Import workbook requirements
 
