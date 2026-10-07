@@ -10,6 +10,10 @@ const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD
 const number = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 const $ = (selector) => document.querySelector(selector);
 
+function handlerLabel(key) {
+  return result?.handlerDefinitions.find(handler => handler.key === key)?.label || key;
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 }
@@ -24,6 +28,13 @@ function showImportedResult(filename) {
   $("#run-state").textContent = "Calculation complete — no entries posted";
   $("#dataset-name").textContent = filename;
   $("#import-error").hidden = true;
+  const handlerOptions = result.handlerDefinitions.map(handler => `<option value="${escapeHtml(handler.key)}">${escapeHtml(handler.label)}</option>`).join("");
+  $("#filter-handler").innerHTML = `<option value="">All handlers</option>${handlerOptions}`;
+  if (!result.handlerDefinitions.some(handler => handler.key === filters.handler)) filters.handler = "";
+  $("#filter-handler").value = filters.handler;
+  $("#additional-handler-help").innerHTML = result.handlerDefinitions
+    .filter(handler => !["AR_USAGE", "AP_GRNI"].includes(handler.key))
+    .map(handler => `<h3>${escapeHtml(handler.label)} <code>${escapeHtml(handler.key)}</code></h3><p>${escapeHtml(handler.help || `${handler.side} accrual handler. See its source module for its calculation rules.`)}</p>`).join("");
   render();
 }
 
@@ -58,10 +69,10 @@ function render() {
   $("#ready-total").textContent = result.totals.ready;
   $("#review-total").textContent = result.totals.review;
   $("#nav-review").textContent = result.totals.review;
-  $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} customer / SKU accruals`;
-  $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} uninvoiced receipt accrual(s)`;
+  $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} AR accrual(s)`;
+  $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} AP accrual(s)`;
   $("#ready-caption").textContent = "No open review, or manually reviewed";
-  $("#review-caption").textContent = "Usage or invoice-matching exceptions";
+  $("#review-caption").textContent = "Items requiring verification";
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   const visible = filterAccruals(result.accruals, filters);
@@ -78,7 +89,7 @@ function render() {
     <tr data-id="${escapeHtml(item.id)}" class="${selectedId === item.id ? "selected" : ""}">
       <td><span class="side ${item.side.toLowerCase()}">${item.side}</span></td>
       <td><strong>${escapeHtml(item.counterparty)}</strong><small>${escapeHtml(item.description)}</small></td>
-      <td><span class="handler">${item.handler === "AR_USAGE" ? "Usage accrual" : "GR not invoiced"}</span></td>
+      <td><span class="handler">${escapeHtml(handlerLabel(item.handler))}</span></td>
       <td class="amount">${money.format(item.amountUsd)}${item.transactionCurrency !== "USD" ? `<small>${number.format(item.transactionAmount)} ${item.transactionCurrency} @ ${item.fx}</small>` : ""}</td>
       <td><span class="status ${item.status.toLowerCase()}">${item.status}</span></td>
       <td><button class="row-open" aria-label="Open ${escapeHtml(item.counterparty)} details">View →</button></td>
@@ -89,12 +100,12 @@ function render() {
 }
 
 function reviewSection(item) {
-  if (item.reviewBlocked) return `<section class="review-decision"><h3>Correct source data to continue</h3><p>This amount is provisional. Fix the invoice references, dates, status, or allocated amounts described above, then import the corrected workbook. Mark Ready is unavailable until the matching issues are resolved. AP download remains locked, including for a zero-dollar exception.</p></section>`;
+  if (item.reviewBlocked) return `<section class="review-decision"><h3>Correct source data to continue</h3><p>This amount needs a source correction. Fix the issues shown above, then import the corrected workbook. Mark Ready is unavailable until they are resolved. The ${escapeHtml(item.side)} download remains locked, including for a zero-dollar exception.</p></section>`;
   if (item.status !== "REVIEW" && !item.review) return "";
   const approved = item.status === "READY" && item.review;
   const history = (result.reviewLog || []).filter(event => event.accrualId === item.id);
   return `<section class="review-decision"><h3>${approved ? "Review recorded" : "Complete review"}</h3>
-    <p>Check the source records, quantity, rate, and amount before marking Ready. This does not post the journal.</p>
+    <p>${escapeHtml(item.reviewInstructions || "Check the source records and amount before marking Ready.")} This does not post the journal.</p>
     ${approved ? `<p class="review-approved">Ready — reviewed by ${escapeHtml(item.review.reviewer)} on ${formatOutputDate(item.review.reviewedAt.slice(0,10))} at ${item.review.reviewedAt.slice(11,19)} UTC.<br>${escapeHtml(item.review.note)}</p>` : ""}
     <form id="review-form">
       <label for="reviewer-name">Reviewer name</label><input id="reviewer-name" name="reviewer" required maxlength="100" autocomplete="name" />
@@ -113,7 +124,7 @@ function renderReview() {
   $("#review-list").innerHTML = reviews.length ? reviews.map((item) => `
     <button class="review-card" data-id="${escapeHtml(item.id)}">
       <span class="review-icon">!</span>
-      <span><strong>${item.side === "AP" ? "Invoice matching" : "Usage spike"} · ${escapeHtml(item.counterparty)}</strong><small>${item.side === "AP" ? escapeHtml(item.reviewReasons.join(" ")) : `${escapeHtml(item.anomaly.event_id)} recorded ${number.format(item.anomaly.quantity)} units vs ${number.format(item.anomaly.baseline)} baseline. Actual usage remains in the accrual.`}</small></span>
+      <span><strong>${escapeHtml(item.reviewTitle || handlerLabel(item.handler))} · ${escapeHtml(item.counterparty)}</strong><small>${escapeHtml(item.reviewSummary || item.description)}</small></span>
       <span class="review-amount">${money.format(item.amountUsd)}</span>
     </button>`).join("") : `<div class="empty">No items require review.</div>`;
   document.querySelectorAll(".review-card").forEach((card) => card.addEventListener("click", () => openDetail(card.dataset.id)));

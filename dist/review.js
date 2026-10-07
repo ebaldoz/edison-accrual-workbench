@@ -12,7 +12,7 @@ export function reviewAccrual(result, id, { reviewer, note, confirmed, action = 
   if (!item) throw new Error("Accrual not found. Reopen the current accrual and try again.");
   if (!["approve", "reopen"].includes(action)) throw new Error("Unknown review action.");
   if (action === "approve" && item.status !== "REVIEW") throw new Error("Only Review accruals can be marked Ready.");
-  if (action === "approve" && item.reviewBlocked) throw new Error("Correct the AP invoice matching data and reimport the workbook before marking Ready. A review note cannot resolve an unknown allocation.");
+  if (action === "approve" && item.reviewBlocked) throw new Error("Correct the source data and reimport the workbook before marking Ready. A review note cannot resolve this exception.");
   if (action === "reopen" && (item.status !== "READY" || !item.review)) throw new Error("Only a reviewed accrual can be reopened.");
   const name = String(reviewer || "").trim();
   const reason = String(note || "").trim();
