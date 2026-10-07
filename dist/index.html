@@ -28,8 +28,22 @@
 
   <main id="main-content" tabindex="-1">
     <header>
-      <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
+      <div><p id="period-eyebrow" class="eyebrow">MAR 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
+        <details id="period-picker" class="period-picker">
+          <summary><span>Period</span><strong id="period-selected">Mar 2026</strong><span class="period-chevron" aria-hidden="true">⌄</span></summary>
+          <div class="period-popover">
+            <div class="period-year-row">
+              <button id="period-year-prev" type="button" aria-label="Previous year">‹</button>
+              <label for="period-year" class="sr-only">Year</label>
+              <input id="period-year" type="number" min="1900" max="2100" step="1" value="2026" inputmode="numeric" aria-label="Year" />
+              <button id="period-year-next" type="button" aria-label="Next year">›</button>
+            </div>
+            <div id="period-months" class="period-months" role="group" aria-label="Month"></div>
+            <p id="period-error" class="period-error" role="alert" hidden></p>
+            <p id="period-note">Changing period reruns the imported workbook and resets review decisions.</p>
+          </div>
+        </details>
         <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
       </div>
     </header>
@@ -37,7 +51,7 @@
     <div id="import-error" class="error-banner" role="alert" hidden></div>
 
     <section id="workspace" class="run-banner">
-      <div class="run-copy"><span id="run-dot" class="pulse pending" aria-hidden="true"></span><div><div class="run-title"><strong id="run-state">Import workbook to begin</strong><button id="import-info" class="info-button" type="button" aria-label="About importing and journal output" aria-haspopup="dialog" aria-controls="controls-help" title="About importing and journal output"><span aria-hidden="true">i</span></button></div><small><span id="dataset-name">No workbook loaded</span> · Close 03/31/2026 · Reversal 04/01/2026</small></div></div>
+      <div class="run-copy"><span id="run-dot" class="pulse pending" aria-hidden="true"></span><div><div class="run-title"><strong id="run-state">Import workbook to begin</strong><button id="import-info" class="info-button" type="button" aria-label="About importing and journal output" aria-haspopup="dialog" aria-controls="controls-help" title="About importing and journal output"><span aria-hidden="true">i</span></button></div><small><span id="dataset-name">No workbook loaded</span> · Close <time id="close-date" datetime="2026-03-31">03/31/2026</time> · Reversal <time id="reversal-date" datetime="2026-04-01">04/01/2026</time></small></div></div>
       <div id="balance-state" class="control pending">Awaiting import</div>
     </section>
 

@@ -1,8 +1,12 @@
 import { AccrualEngine, toJournalCsv, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
 import { filterAccruals, reviewAccrual } from "./review.js";
+import { MONTHS, periodDates, periodLabel } from "./period.js";
 
 const engine = new AccrualEngine();
 let result;
+let importedSheets = null;
+let importedFilename = "";
+let selectedPeriod = { year: 2026, month: 3 };
 let selectedId = null;
 const filters = { side: "", counterparty: "", status: "", handler: "" };
 
@@ -212,10 +216,79 @@ async function importWorkbook(file) {
     sheets[name] = window.XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: true });
   }
   validateDataset(sheets);
-  const nextResult = engine.run(sheets, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
+  const nextResult = engine.run(sheets, periodDates(selectedPeriod.year, selectedPeriod.month));
+  importedSheets = sheets;
+  importedFilename = file.name;
   result = nextResult;
   showImportedResult(file.name);
 }
+
+function updatePeriodDisplay() {
+  const { year, month } = selectedPeriod;
+  const dates = periodDates(year, month);
+  $("#period-selected").textContent = periodLabel(year, month);
+  $("#period-eyebrow").textContent = `${MONTHS[month - 1].toUpperCase()} ${year} CLOSE`;
+  $("#close-date").dateTime = dates.closeDate;
+  $("#close-date").textContent = formatOutputDate(dates.closeDate);
+  $("#reversal-date").dateTime = dates.reversalDate;
+  $("#reversal-date").textContent = formatOutputDate(dates.reversalDate);
+}
+
+function renderPeriodMonths() {
+  const year = Number($("#period-year").value);
+  $("#period-year-prev").disabled = year <= 1900;
+  $("#period-year-next").disabled = year >= 2100;
+  $("#period-months").innerHTML = MONTHS.map((name, index) => {
+    const month = index + 1;
+    const pressed = selectedPeriod.year === year && selectedPeriod.month === month;
+    return `<button type="button" data-month="${month}" aria-label="${name} ${Number.isInteger(year) ? year : ""}" aria-pressed="${pressed}">${name}</button>`;
+  }).join("");
+}
+
+function selectPeriod(month) {
+  const year = Number($("#period-year").value);
+  try {
+    const dates = periodDates(year, month);
+    if (year !== selectedPeriod.year || month !== selectedPeriod.month) {
+      const nextResult = importedSheets ? engine.run(importedSheets, dates) : null;
+      selectedPeriod = { year, month };
+      result = nextResult || result;
+      updatePeriodDisplay();
+      if (nextResult) showImportedResult(importedFilename);
+    }
+    $("#period-error").hidden = true;
+    $("#period-picker").open = false;
+    $("#period-picker summary").focus();
+  } catch (error) {
+    $("#period-error").textContent = error.message;
+    $("#period-error").hidden = false;
+  }
+}
+
+$("#period-picker").addEventListener("toggle", event => {
+  if (!event.currentTarget.open) return;
+  $("#period-year").value = selectedPeriod.year;
+  $("#period-error").hidden = true;
+  renderPeriodMonths();
+});
+$("#period-year").addEventListener("input", () => { $("#period-error").hidden = true; renderPeriodMonths(); });
+for (const [id, offset] of [["period-year-prev", -1], ["period-year-next", 1]]) {
+  $(`#${id}`).addEventListener("click", () => {
+    const current = Number($("#period-year").value);
+    $("#period-year").value = Math.min(2100, Math.max(1900, (Number.isInteger(current) && current >= 1900 && current <= 2100 ? current : selectedPeriod.year) + offset));
+    renderPeriodMonths();
+  });
+}
+$("#period-months").addEventListener("click", event => {
+  const button = event.target.closest("button[data-month]");
+  if (button) selectPeriod(Number(button.dataset.month));
+});
+$("#period-picker").addEventListener("keydown", event => {
+  if (event.key === "Escape") { event.stopPropagation(); $("#period-picker").open = false; $("#period-picker summary").focus(); }
+});
+document.addEventListener("click", event => {
+  if (!$("#period-picker").contains(event.target)) $("#period-picker").open = false;
+});
 
 $("#export-ar-csv").addEventListener("click", () => downloadCsv("AR"));
 $("#export-ap-csv").addEventListener("click", () => downloadCsv("AP"));
@@ -320,4 +393,5 @@ document.addEventListener("keydown", event => {
 });
 setSidebar(sidebarCollapsed);
 updateNavigation();
+updatePeriodDisplay();
 renderEmpty();
