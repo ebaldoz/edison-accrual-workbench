@@ -34,7 +34,7 @@ Open `http://localhost:4173` and import the supplied workbook. A valid import ca
 ## Import workbook requirements
 
 - Import **one Excel workbook** (`.xlsx` or `.xls`), not separate CSV files. The filename does not matter; `Helix_Anchor_Dataset_CANDIDATE.xlsx` is an example, not the only accepted file.
-- The workbook must contain the **nine worksheet names below exactly** (including case and underscores). Sheet order does not matter, and extra sheets are allowed. The sample's `gl_accounts` sheet is extra; the current calculations do not require or read it.
+- With the two handlers enabled by default, the workbook must contain the **nine worksheet names below exactly** (including case and underscores). Sheet order does not matter, and extra sheets are allowed. The sample's `gl_accounts` sheet is extra; the current calculations do not require or read it. A newly registered handler may declare additional required sheets; only sheets required by enabled handlers are validated.
 - Keep the column headers used by the calculations exactly as shown. The table lists the key fields the app reads, not a complete validation schema; a missing or invalid value can make import fail or produce a Review exception. Other columns from the sample workbook may remain.
 
 | Worksheet | Key columns used by the current calculations |
@@ -56,26 +56,26 @@ Open `http://localhost:4173` and import the supplied workbook. A valid import ca
 The browser app separates the close workflow into four layers:
 
 1. **Workbook adapter** converts named XLSX sheets into arrays of records.
-2. **Accrual engine** validates inputs, selects registered handlers, and returns a common accrual contract.
-3. **Handlers** own source-specific accounting logic. `UsageAccrualHandler` and `ReceiptAccrualHandler` implement the required scenarios. The engine can route to another registered handler, but the current export and UI also contain AR/AP-specific mappings; see below before adding a third type.
-4. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads.
+2. **Handler registry** validates plugin metadata, rejects duplicate keys, and selects all registered handlers by default (or a requested subset).
+3. **Accrual engine** validates only the selected handlers' worksheets and checks each plugin's returned accrual and balanced lines against a common contract.
+4. **Handlers** own source-specific accounting logic in separate modules. `UsageAccrualHandler` and `ReceiptAccrualHandler` implement the required scenarios.
+5. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads. The exporter selects every line by AR/AP side, so multiple handlers on the same side share the monthly journal.
 
 The implementation is static by design: this is a reviewable proof of concept, not a production posting service. Deterministic IDs demonstrate idempotent intent. A production implementation would enforce uniqueness in a database and in NetSuite's external-ID field.
 
 ## Where to add or edit a handler
 
-- **Edit AR usage calculations:** `UsageAccrualHandler` in [`dist/engine.js`](dist/engine.js) selects unbilled events, groups by customer and SKU, calculates the amount, and flags usage anomalies.
-- **Edit AP receipt accruals:** `ReceiptAccrualHandler` in [`dist/engine.js`](dist/engine.js) turns uninvoiced receipt balances into accruals. Its invoice-to-receipt matching, cutoff, and residual-value rules live in [`dist/ap-matching.js`](dist/ap-matching.js), in `reconcileReceipts()`.
+- **Edit AR usage calculations:** `UsageAccrualHandler` in [`dist/handlers/usage.js`](dist/handlers/usage.js) selects unbilled events, groups by customer and SKU, calculates the amount, and flags usage anomalies.
+- **Edit AP receipt accruals:** `ReceiptAccrualHandler` in [`dist/handlers/receipt.js`](dist/handlers/receipt.js) turns uninvoiced receipt balances into accruals. Its invoice-to-receipt matching, cutoff, and residual-value rules live in [`dist/ap-matching.js`](dist/ap-matching.js), in `reconcileReceipts()`.
 
 To add a third accrual type (for example, an AP subscription accrual):
 
-1. Add a handler class beside the existing handlers in `dist/engine.js`. Give it a unique `key`, a `canHandle(kind)` method, and a `calculate(sheets, context)` method. Return an array of accrual objects using the same fields as the existing handlers, including a stable `id`, `handler`, `side`, `amountUsd`, `status`, source detail, and balanced debit/credit `lines`. Every journal line needs its source reference and the close/reversal dates. The existing `makeLines()` helper is private to this file; export or refactor it if you put the new class in another file.
-2. Register the class in `AccrualEngine`'s default `handlers` array and add its key to the default `selected` list in `run()`. Alternatively, pass both a custom handler list to the constructor and a matching `context.handlers` list to `run()`. The browser currently uses those defaults: `dist/app.js` creates `new AccrualEngine()` and calls `engine.run()` without selecting handlers.
-3. If the new type needs another worksheet, decide whether to add it to `REQUIRED_SHEETS` in `dist/engine.js`. `dist/app.js` already reads every named worksheet. Making a sheet required will cause imports of the original anchor workbook to fail, so keep it optional or supply an updated workbook if existing imports must continue to work.
-4. Wire the new key into the output and screen. `makeLines()` maps handler keys to AR/AP journal sides; `getExportAvailability()` and `toJournalCsv()` currently select only `AR_USAGE` or `AP_GRNI`, so a new handler's lines would otherwise be omitted from downloads. `dist/app.js` has fixed handler labels, review wording, filters, metrics, and AR/AP download controls. Update the relevant parts, especially if the new type has different review rules or introduces a new side.
-5. Add calculation and export tests in [`tests/engine.test.mjs`](tests/engine.test.mjs) or a new test file. Check the amount, source references, stable IDs, balanced lines, reversal date, Review/Ready behavior, and inclusion in the intended CSV. Run `npm test`.
+1. Create `dist/handlers/your-handler.js`. Export a class or object with a unique `key`, an `AR` or `AP` `side`, a human-readable `label`, a `requiredSheets` array, and `calculate(sheets, context)`. Optional `help` text appears in the Handler information modal. The registry checks this metadata and rejects duplicate keys.
+2. Return an array of accrual objects with stable `id`, matching `handler` and `side`, `counterparty`, `source`, `description`, nonnegative `amountUsd`, `READY` or `REVIEW` status, `sourceDetail`, and balanced `lines`. Use [`makeAccrualLines()`](dist/handler-kit.js) to produce the debit/credit pair with source references, deterministic monthly side-level external ID, and close/reversal dates. If Review is possible, provide `reviewTitle` and `reviewSummary`; set `reviewBlocked` when source correction (rather than manual approval) is required.
+3. Add one import and one instance in [`dist/handlers/index.js`](dist/handlers/index.js). `new AccrualEngine()` then runs the new handler automatically. The app reads all workbook tabs, validates each enabled handler's `requiredSheets`, shows the handler's label/filter/help, and includes its lines in the AR or AP CSV without new exporter mappings. To run only selected handlers in code, pass `{ handlers: ["YOUR_KEY"] }` to `run()`; only that subset's sheets are required.
+4. Add a contract and calculation test. [`tests/plugins.test.mjs`](tests/plugins.test.mjs) demonstrates a third AP subscription-style test handler, including its extra worksheet, shared AP external ID and CSV, validation failures, and download lock when it returns Review. It is a test fixture, **not** a production subscription calculation or a default handler. Run `npm test`.
 
-In short, the **routing** is pluggable, but adding a fully usable third type currently requires a few explicit output/UI changes. Those mappings would be natural candidates for a shared handler registry in a production version.
+The plugin boundary is intentionally limited to the existing AR/AP journal sides. A genuinely new journal side, posting policy, or richer custom detail view would still require a deliberate UI/export design change; do not silently map it to AR or AP. Registering a handler that requires a new sheet also requires supplying that sheet in the imported workbook.
 
 ## Accounting assumptions
 
