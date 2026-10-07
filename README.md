@@ -16,7 +16,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Allows current-run review of usage flags: verify the source/amount, enter a reviewer name and note, check the confirmation, and choose Mark Ready. Both journal lines become Ready; the original anomaly and amount are preserved. Reviewed items can be reopened with a reason. AP matching exceptions require corrected source data and reimport; they cannot be waived with a review note.
 - Disables each side's download until every accrual line on that side is Ready. Empty sides are disabled too. This rule is also checked by the CSV formatter, not just the button.
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
-- Opens the control-design explanation in a modal from the information button beside Import workbook or from Controls in the sidebar.
+- Opens the control-design explanation in a modal from the information button beside the import-status heading or from Controls in the sidebar.
 
 After importing the supplied anchor workbook, the expected results are **AR $362.50** and **AP $100,000.00**. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
 
