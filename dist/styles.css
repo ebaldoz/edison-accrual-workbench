@@ -320,3 +320,27 @@ button:focus-visible,a:focus-visible,.upload:focus-within { outline:3px solid #a
   dl div { grid-template-columns:1fr; gap:4px; }
   dd { text-align:left; }
 }
+
+/* Lambda-inspired action treatment: keep inactive exports muted. */
+:root { --action-paper:#e7e6d9; --action-rose:#e29bc8; --action-mint:#8bd4a8; --link-hover-purple:#9b7dff; }
+.upload,.panel-foot button:not(:disabled) {
+  background:var(--action-paper);
+  color:#151515;
+  border:2px solid var(--action-paper);
+  border-left-color:var(--action-rose);
+  border-right-color:var(--action-mint);
+}
+.upload:hover,.panel-foot button:not(:disabled):hover { background:#f6f5ea; color:#151515; }
+.panel-foot button:disabled { background:#343432; color:#b7b7ae; border:1px solid #62625b; }
+nav a.active,nav a.active:hover {
+  background:var(--action-paper);
+  color:#151515;
+  border:2px solid var(--action-paper);
+  border-left-color:var(--action-rose);
+  border-right-color:var(--action-mint);
+  padding-left:12px;
+}
+nav a.active .nav-icon,nav a.active .nav-label { color:#151515; }
+nav a.active b { background:#6038ef; color:#fff; }
+.row-open:hover,.accrual-filters button:hover,.info-button:hover { color:var(--link-hover-purple); }
+.info-button:hover { background:transparent; }
