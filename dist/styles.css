@@ -281,8 +281,8 @@ dt { overflow-wrap:anywhere; }
 .info-button { display:inline-grid; place-items:center; width:44px; height:44px; padding:0; border:0; background:transparent; color:#c1aaff; cursor:pointer; }
 .info-button span { display:grid; place-items:center; width:22px; height:22px; border:1px solid currentColor; border-radius:50%; font:700 1rem/1 Georgia,serif; text-transform:none; }
 .info-button:hover { color:var(--ink); background:#211a39; }
-.header-actions .info-button { flex:none; width:44px; height:44px; min-height:44px; padding:0; border:1px solid var(--line); background:#1c1c1a; color:#c1aaff; }
-.header-actions .info-button:hover { background:#211a39; color:var(--ink); }
+.run-copy .run-title { display:flex; align-items:center; flex-wrap:wrap; gap:8px; }
+.run-copy .info-button { min-width:44px; min-height:44px; }
 .column-help { width:min(44rem,calc(100% - 32px)); max-height:85vh; max-height:85svh; margin:auto; padding:28px; overflow:auto; color:var(--ink); background:#151513; border:1px solid #76766b; }
 .column-help::backdrop { background:#000b; }
 .help-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
