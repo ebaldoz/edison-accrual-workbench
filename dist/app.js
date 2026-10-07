@@ -118,7 +118,7 @@ function reviewSection(item) {
       <p id="review-error" role="alert" hidden></p>
       <button class="review-submit" type="submit">${approved ? "Reopen review" : "Mark Ready"}</button>
     </form>
-    <p class="session-note">Current import only. Refresh or import a workbook again to reset approvals. Names are self-entered, not verified identities.</p>
+    <p class="session-note">Current calculation only. Refresh, change period, or import a workbook again to reset approvals. Names are self-entered, not verified identities.</p>
     ${history.length ? `<details><summary>Review history for this run (${history.length})</summary><ul>${history.map(event => `<li>${event.action === "approve" ? "Marked Ready" : "Reopened"} by ${escapeHtml(event.reviewer)} · ${formatOutputDate(event.reviewedAt.slice(0,10))} ${event.reviewedAt.slice(11,19)} UTC — ${escapeHtml(event.note)}</li>`).join("")}</ul></details>` : ""}
   </section>`;
 }
