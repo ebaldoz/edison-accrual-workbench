@@ -5,6 +5,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 ## What it does
 
 - Opens with no workbook or calculated results. Import the supplied XLSX workbook each time the page loads; successful import runs the close automatically.
+- Selects a close period using a year and a 3-column by 4-row grid of abbreviated months. The posting date is that month's last calendar day; the reversal date is the first calendar day of the following month, including across years. The initial selection is March 2026. Changing the period after import recalculates the in-memory workbook and resets review decisions.
 - Calculates usage-based AR for the unbilled period after the latest Chargebee invoice.
 - Converts the EUR customer's USD-valued usage to a transaction-currency view while booking the journal in USD.
 - Accrues each receipt's uninvoiced USD balance, subtracting valid matched invoices dated through close rather than excluding its entire PO.
@@ -18,7 +19,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
 - Opens the control-design explanation in a modal from the information button beside the import-status heading or from Controls in the sidebar.
 
-After importing the supplied anchor workbook, the expected results are **AR $362.50** and **AP $100,000.00**. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
+For the default March 2026 period, importing the supplied anchor workbook produces **AR $362.50** and **AP $100,000.00**. Other periods can produce different accruals because the selected month-end is also the calculation cutoff. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
 
 ## Run locally
 
@@ -29,7 +30,7 @@ npm test
 npm run serve
 ```
 
-Open `http://localhost:4173` and import the supplied workbook. A valid import calculates the accruals immediately; to recalculate corrected source data, import the corrected workbook. A refresh clears the in-browser workbook and results; import again to continue. The workbook is not saved to a database or browser storage.
+Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Changing the period reruns the imported workbook; to recalculate corrected source data, import the corrected workbook. A refresh clears the in-browser workbook and results; import again to continue. The workbook is not saved to a database or browser storage.
 
 ## Import workbook requirements
 
@@ -49,7 +50,7 @@ Open `http://localhost:4173` and import the supplied workbook. A valid import ca
 | `goods_receipts` | `receipt_id`, `po_number`, `po_line_ref`, `received_on`, `value_usd` |
 | `vendor_invoices` | If populated: `invoice_number`, `vendor_id`, `invoice_date`, `status`, `subtotal_usd`, and a `po_number` or `receipt_id` reference. The receipt/PO-line allocation fields are described under [AP calculation and workbook fields](#ap-calculation-and-workbook-fields). |
 
-`vendor_invoices` must exist even when there are no vendor bills yet; it may have **zero data rows**. For AP dates, use real Excel dates or `YYYY-MM-DD` text. The browser app currently fixes the close date to **03/31/2026** and reversal date to **04/01/2026**; neither the filename nor a date inside the workbook changes those settings. A missing required sheet produces a “Missing required sheets” error. The import reads the file in the browser and does not save the workbook or approvals between refreshes.
+`vendor_invoices` must exist even when there are no vendor bills yet; it may have **zero data rows**. For AP dates, use real Excel dates or `YYYY-MM-DD` text. The browser period picker defaults to March 2026 (posting **03/31/2026**, reversal **04/01/2026**); neither the filename nor a date inside the workbook overrides the selected period. A missing required sheet produces a “Missing required sheets” error. The import reads the file in the browser and does not save the workbook or approvals between refreshes.
 
 ## Architecture
 
@@ -79,7 +80,7 @@ The plugin boundary is intentionally limited to the existing AR/AP journal sides
 
 ## Accounting assumptions
 
-- Close date is 2026-03-31 and reversal date is 2026-04-01.
+- The selected period's month-end is the posting date and calculation cutoff; the reversal date is the first calendar day of the next month (not adjusted for weekends or holidays). March 2026 is the initial selection.
 - Group CSV rows by `external_id` into journals. Map `posting_date`, `reversal_date`, and `currency` to journal-header fields, not journal-line fields. The export checks that these values are consistent within each journal. Map account/debit/credit to line fields. The destination system must process the reversal; the app does not post or schedule one.
 - CSV date columns use `MM/DD/YYYY` (e.g. `03/31/2026`, `04/01/2026`); engine dates and source payloads remain ISO. IDs and filenames keep their machine-readable year-month/date tokens.
 - Map `line_id`, `accrual_id`, and `source_ref` to line-level audit fields, and `memo` to the line memo. Transaction-currency amounts/rates are source-level reference fields; the journal currency is USD, including Berlin's lines. March AR is one six-line journal; March AP is one two-line journal. No customer/source-level lines are consolidated or discarded.
@@ -96,7 +97,7 @@ For this dataset, a transparent rule is safer than an opaque model. The detector
 
 ## Test coverage
 
-The tests verify anchor totals, EUR translation, anomaly routing, receipt/line matching, partial and multiple invoices, invoice/receipt cutoff boundaries, ambiguous matches, duplicate allocations, invoice-header reconciliation, invalid fields, over-invoicing, source correction, download gates, deterministic IDs, balanced entries, source references, AR/AP separation, and consistent header reversal dates with no reversal rows.
+The tests verify anchor totals, EUR translation, anomaly routing, receipt/line matching, partial and multiple invoices, invoice/receipt cutoff boundaries, ambiguous matches, duplicate allocations, invoice-header reconciliation, invalid fields, over-invoicing, source correction, download gates, deterministic IDs, balanced entries, source references, AR/AP separation, selected-period month-end and next-month dates (including leap years and year rollover), and consistent header reversal dates with no reversal rows.
 
 ## Deployment recommendation
 
