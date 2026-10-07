@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { AccrualEngine, toJournalCsv, getExportAvailability } from "../dist/engine.js";
-import { anchorData } from "../dist/anchor-data.js";
+import { anchorData } from "./fixtures/anchor-data.js";
 import { reviewAccrual } from "../dist/review.js";
 const fixture = () => structuredClone(anchorData);
 const invoice = (changes = {}) => ({ invoice_number: "INV-1", vendor_id: "VEN-DELL-01", po_number: "PO-2026-0188", invoice_date: "2026-03-30", subtotal_usd: 40000, status: "approved", ...changes });
