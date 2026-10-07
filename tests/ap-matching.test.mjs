@@ -59,7 +59,7 @@ test("ambiguous PO/line invoices stay Review, lock export and cannot be manually
     assert.ok(result.accruals.every(row => row.status === "REVIEW"));
     assert.equal(getExportAvailability(result.journalLines, "AP").allowed, false);
     assert.throws(() => toJournalCsv(result.journalLines, "AP"), /not Ready/);
-    assert.throws(() => reviewAccrual(result, result.accruals[0].id, {reviewer:"Test",note:"checked",confirmed:true}), /Correct the AP/);
+    assert.throws(() => reviewAccrual(result, result.accruals[0].id, {reviewer:"Test",note:"checked",confirmed:true}), /Correct the source data/);
   }
 });
 test("explicit allocations split an invoice across receipts without repeating its subtotal", () => {
