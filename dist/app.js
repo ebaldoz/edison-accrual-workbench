@@ -57,8 +57,9 @@ function renderEmpty() {
   for (const side of ["ar", "ap"]) {
     $(`#export-${side}-csv`).disabled = true;
     $(`#export-${side}-reason`).textContent = "Import a workbook before downloading.";
-    $(`#check-${side}-export`).disabled = true;
+    $(`#export-${side}-id`).hidden = true;
   }
+  $("#check-ap-export").disabled = true;
   for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = true;
   $("#clear-filters").disabled = true;
 }
@@ -100,7 +101,7 @@ function render() {
   $("#nav-review").textContent = result.totals.review;
   $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} AR accrual(s)`;
   $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} AP accrual(s)`;
-  $("#ready-caption").textContent = "Calculation-ready; posting check is separate";
+  $("#ready-caption").textContent = "Calculation-ready; AP ledger check is separate";
   $("#review-caption").textContent = "Items requiring verification";
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
@@ -110,11 +111,16 @@ function render() {
     const calculated = getExportAvailability(result.journalLines, side);
     const state = getPostingAvailability(result, side);
     const key = side.toLowerCase();
-    $(`#check-${key}-export`).disabled = !calculated.allowed;
-    $(`#check-${key}-export`).title = calculated.allowed ? `Check ${side} journal before export` : calculated.reason;
+    if (side === "AP") {
+      $("#check-ap-export").disabled = !calculated.allowed;
+      $("#check-ap-export").title = calculated.allowed ? "Reconcile AP receipt and GL balances" : calculated.reason;
+    }
     $(`#export-${key}-csv`).disabled = !state.allowed;
     $(`#export-${key}-csv`).title = state.reason;
     $(`#export-${key}-reason`).textContent = state.reason;
+    const id = $(`#export-${key}-id`);
+    id.hidden = !calculated.allowed;
+    if (calculated.allowed) id.textContent = `Monthly external ID: ${journalIdForSide(result, side)}`;
   }
 
   $("#accrual-body").innerHTML = visible.length ? visible.map((item) => `
@@ -321,14 +327,13 @@ $("#export-ap-csv").addEventListener("click", () => downloadCsv("AP"));
 let postingCheckSide = null;
 let postingCheckOpener = null;
 function openPostingCheck(side, opener) {
-  if (!result || !getExportAvailability(result.journalLines, side).allowed) return;
+  if (side !== "AP" || !result || !getExportAvailability(result.journalLines, side).allowed) return;
   postingCheckSide = side;
   postingCheckOpener = opener;
   $("#posting-check-form").reset();
   $("#posting-check-error").hidden = true;
-  $("#posting-check-title").textContent = `${side} pre-export check`;
+  $("#posting-check-title").textContent = "AP receipt / GL check";
   $("#posting-check-journal").textContent = `Monthly external ID: ${journalIdForSide(result, side)}`;
-  $("#posting-check-ap").hidden = side !== "AP";
   $("#revoke-posting-check").hidden = !result.postingChecks?.[side];
   $("#posting-check-existing").textContent = result.postingChecks?.[side]
     ? `Current check recorded by ${result.postingChecks[side].reviewer}. Recording a new check replaces it.`
@@ -336,16 +341,13 @@ function openPostingCheck(side, opener) {
   $("#posting-check").showModal();
   $("#posting-check-title").focus();
 }
-for (const side of ["AR", "AP"]) {
-  $(`#check-${side.toLowerCase()}-export`).addEventListener("click", event => openPostingCheck(side, event.currentTarget));
-}
+$("#check-ap-export").addEventListener("click", event => openPostingCheck("AP", event.currentTarget));
 $("#posting-check-form").addEventListener("submit", event => {
   event.preventDefault();
   try {
     recordPostingCheck(result, postingCheckSide, {
       reviewer: $("#posting-check-name").value,
       evidence: $("#posting-check-evidence").value,
-      externalIdAbsent: $("#posting-check-external").checked,
       apGlNotRecorded: $("#posting-check-gl").checked,
     });
     $("#posting-check").close();

@@ -24,26 +24,27 @@ export function getPostingAvailability(result, side) {
   if (!result) return { allowed: false, reason: "Import a workbook before downloading." };
   const calculation = getExportAvailability(result.journalLines, side);
   if (!calculation.allowed) return calculation;
+  if (side === "AR") return { allowed: true, reason: "AR is Ready for download." };
   const check = result.postingChecks?.[side];
   let currentJournalId;
   try { currentJournalId = journalIdForSide(result, side); }
   catch (error) { return { allowed: false, reason: error.message }; }
   if (!check || check.journalId !== currentJournalId || check.signature !== journalSignature(result, side)) {
-    return { allowed: false, reason: `${side} export check required: verify the NetSuite external ID${side === "AP" ? " and existing receipt/GL accruals" : ""}.` };
+    return { allowed: false, reason: "AP receipt/GL reconciliation required before download." };
   }
-  return { allowed: true, reason: `${side} export check recorded by ${check.reviewer}. No entry has been posted by this app.` };
+  return { allowed: true, reason: `AP receipt/GL check recorded by ${check.reviewer}. Ready for download.` };
 }
 
-export function recordPostingCheck(result, side, { reviewer, evidence, externalIdAbsent, apGlNotRecorded }, now = new Date()) {
+export function recordPostingCheck(result, side, { reviewer, evidence, apGlNotRecorded }, now = new Date()) {
   if (!result) throw new Error("Import a workbook before recording an export check.");
+  if (side !== "AP") throw new Error("Only AP requires a receipt/GL export check.");
   const calculation = getExportAvailability(result.journalLines, side);
   if (!calculation.allowed) throw new Error(calculation.reason);
   const name = String(reviewer || "").trim();
   const reference = String(evidence || "").trim();
   if (!name || name.length > 100) throw new Error("Enter the checker’s name (up to 100 characters).");
-  if (!reference || reference.length > 1000) throw new Error("Enter a NetSuite search or reconciliation evidence reference (up to 1,000 characters).");
-  if (externalIdAbsent !== true) throw new Error("Confirm the monthly external ID has no existing posted journal. If one exists, stop and reconcile it.");
-  if (side === "AP" && apGlNotRecorded !== true) throw new Error("Confirm the proposed AP balance is not already recorded by goods-receipt or other GL postings. If any amount is posted, stop and reconcile it.");
+  if (!reference || reference.length > 1000) throw new Error("Enter a receipt/GL reconciliation evidence reference (up to 1,000 characters).");
+  if (apGlNotRecorded !== true) throw new Error("Confirm the proposed AP balance is not already recorded by goods-receipt or other GL postings. If any amount is posted, stop and reconcile it.");
   if (!Number.isFinite(now.getTime())) throw new Error("Invalid export-check time.");
   // Check journal structure before accepting a human sign-off, not only at download time.
   toJournalCsv(result.journalLines, side);
@@ -53,7 +54,7 @@ export function recordPostingCheck(result, side, { reviewer, evidence, externalI
     reviewer: name,
     evidence: reference,
     checkedAt: now.toISOString(),
-    apGlNotRecorded: side === "AP" ? true : null,
+    apGlNotRecorded: true,
   };
   result.postingChecks ||= {};
   result.postingChecks[side] = check;
@@ -68,21 +69,22 @@ export function revokePostingCheck(result, side) {
 export function toPostingControlledCsv(result, side) {
   const availability = getPostingAvailability(result, side);
   if (!availability.allowed) throw new Error(availability.reason);
+  if (side === "AR") return toJournalCsv(result.journalLines, side);
   const check = result.postingChecks[side];
-  const checkedLines = result.journalLines.map(line => line.side === side ? {
+  const checkedLines = result.journalLines.map(line => line.side === "AP" ? {
     ...line,
     posting_checked_by: check.reviewer,
     posting_check_evidence: check.evidence,
     posting_checked_on: check.checkedAt.slice(0, 10),
     posting_checked_time_utc: check.checkedAt.slice(11, 19),
-    ap_gl_not_recorded_confirmed: side === "AP" ? "Yes" : "",
+    ap_gl_not_recorded_confirmed: "Yes",
   } : line);
   return toJournalCsv(checkedLines, side);
 }
 
 export function consumePostingControlledCsv(result, side) {
   const csv = toPostingControlledCsv(result, side);
-  // A download is not proof of posting. Require a fresh live-ledger check before another download.
-  revokePostingCheck(result, side);
+  // A download is not proof of posting. Only AP's human GL check is one-use.
+  if (side === "AP") revokePostingCheck(result, side);
   return csv;
 }

@@ -80,10 +80,10 @@
         </table>
       </div>
       <section class="posting-checks" aria-labelledby="posting-checks-title">
-        <div><p class="eyebrow">PRE-EXPORT CONTROL</p><h3 id="posting-checks-title">Check the journal before download</h3><p>These calculations do not read NetSuite. Confirm the monthly external ID is not already posted. For AP, also reconcile the goods receipt and accrued-liability GL balance; do not export an amount already recorded.</p></div>
-        <div class="posting-check-actions"><button id="check-ar-export" type="button" disabled>Check AR export</button><button id="check-ap-export" type="button" disabled>Check AP export</button></div>
+        <div><p class="eyebrow">AP LEDGER CONTROL</p><h3 id="posting-checks-title">Reconcile AP before download</h3><p>Check each proposed uninvoiced receipt against goods-receipt and accrued-liability GL postings. Do not export an amount already recorded. AR needs no separate export check.</p></div>
+        <div class="posting-check-actions"><button id="check-ap-export" type="button" disabled>Check AP receipt / GL</button></div>
       </section>
-      <div class="panel-foot"><span>Download requires every accrual on that side to be Ready and a current pre-export check. Downloads include the full side, not just filtered rows. One monthly journal ID, line-level audit references, MM/DD/YYYY dates, and no reversal rows. No entries are posted.</span><div class="export-actions" role="group" aria-label="Download journals by accrual type"><div><button id="export-ar-csv" disabled aria-describedby="export-ar-reason">Download AR CSV ↓</button><p id="export-ar-reason" role="status">Import a workbook before downloading.</p></div><div><button id="export-ap-csv" disabled aria-describedby="export-ap-reason">Download AP CSV ↓</button><p id="export-ap-reason" role="status">Import a workbook before downloading.</p></div></div></div>
+      <div class="panel-foot"><div class="export-actions" role="group" aria-label="Download journals by accrual type"><div><button id="export-ar-csv" disabled aria-describedby="export-ar-reason">Download AR CSV ↓</button><p id="export-ar-reason" role="status">Import a workbook before downloading.</p><p id="export-ar-id" class="export-id" hidden></p></div><div><button id="export-ap-csv" disabled aria-describedby="export-ap-reason">Download AP CSV ↓</button><p id="export-ap-reason" role="status">Import a workbook before downloading.</p><p id="export-ap-id" class="export-id" hidden></p></div></div><p class="netsuite-note">In NetSuite, map <code>external_id</code> to Journal Entry External ID and import using <strong>Add</strong>. An existing ID should be rejected; do not use Update or Add or Update for a new close journal.</p></div>
     </section>
 
     <section id="review" class="review-section">
@@ -95,24 +95,23 @@
 
   <dialog id="controls-help" class="column-help controls-help" aria-labelledby="controls-help-title">
     <div class="help-heading"><div><p class="eyebrow">CONTROL DESIGN</p><h2 id="controls-help-title" tabindex="-1">One engine. Pluggable accrual handlers.</h2></div><button id="close-controls-help" class="close" type="button" aria-label="Close workflow information">×</button></div>
-    <p>Separate AR and AP CSVs contain original accrual lines under one external ID per month and side. Each row retains a unique line ID, an accrual ID linking its debit/credit pair, and source references. Before download, a controller records a NetSuite external-ID check; AP also requires a receipt/GL check. These are self-entered attestations, not automatic NetSuite verification. The posting system must reject or reconcile an existing external ID; this demo only calculates and exports.</p>
+    <p>Separate AR and AP CSVs contain original accrual lines under one external ID per month and side. Each row retains a unique line ID, an accrual ID linking its debit/credit pair, and source references. AR downloads after its calculations are Ready. AP also requires a self-entered receipt/GL reconciliation check. NetSuite must import as Add and reject an existing external ID; this demo only calculates and exports.</p>
     <div class="flow modal-flow" role="img" aria-label="Workbook goes to the handler registry, then to the built-in AR usage and AP receipt handlers or additional registered handlers, which produce journal CSVs."><span>Workbook</span><b aria-hidden="true">→</b><span>Registry</span><b aria-hidden="true">→</b><span class="accent">AR usage</span><span class="accent">AP receipt</span><b aria-hidden="true">→</b><span>Journal CSV</span></div>
   </dialog>
 
   <dialog id="posting-check" class="column-help posting-check-dialog" aria-labelledby="posting-check-title">
-    <div class="help-heading"><div><p class="eyebrow">PRE-EXPORT CONTROL</p><h2 id="posting-check-title" tabindex="-1"></h2></div><button id="close-posting-check" class="close" type="button" aria-label="Close export check">×</button></div>
+    <div class="help-heading"><div><p class="eyebrow">AP LEDGER CONTROL</p><h2 id="posting-check-title" tabindex="-1"></h2></div><button id="close-posting-check" class="close" type="button" aria-label="Close export check">×</button></div>
     <p id="posting-check-journal" class="posting-check-id"></p>
-    <p>This app cannot query NetSuite and does not post entries. Check the live ledger before attesting. If this journal already exists, or its AP amount is partly or fully recorded, stop and reconcile outside this prototype.</p>
+    <p>This app cannot query NetSuite and does not post entries. Reconcile the live receipt and accrued-liability GL balances before attesting. If any proposed AP amount is already recorded, stop and reconcile outside this prototype.</p>
     <p id="posting-check-existing" class="help-note"></p>
     <form id="posting-check-form">
       <label for="posting-check-name">Checker name</label><input id="posting-check-name" required maxlength="100" autocomplete="name" />
-      <label for="posting-check-evidence">NetSuite search / GL reconciliation evidence reference</label><textarea id="posting-check-evidence" required maxlength="1000" rows="3" placeholder="Example: saved-search ID, report reference, and as-of date"></textarea>
-      <label class="posting-check-confirm"><input id="posting-check-external" type="checkbox" required />I searched NetSuite for this exact monthly external ID and found no posted journal.</label>
-      <label id="posting-check-ap" class="posting-check-confirm" hidden><input id="posting-check-gl" type="checkbox" />I reconciled every proposed AP receipt against goods-receipt and accrued-liability GL postings as of close. None of the proposed amount is already recorded.</label>
+      <label for="posting-check-evidence">Receipt / GL reconciliation evidence reference</label><textarea id="posting-check-evidence" required maxlength="1000" rows="3" placeholder="Example: GL report reference, receipt IDs, and as-of date"></textarea>
+      <label class="posting-check-confirm"><input id="posting-check-gl" type="checkbox" required />I reconciled every proposed AP receipt against goods-receipt and accrued-liability GL postings as of close. None of the proposed amount is already recorded.</label>
       <p id="posting-check-error" role="alert" hidden></p>
       <div class="posting-check-buttons"><button type="submit">Record check</button><button id="revoke-posting-check" type="button" hidden>Revoke prior check</button></div>
     </form>
-    <p class="help-note">This check permits one download in the current calculation. A repeat download needs a fresh NetSuite search. It does not prove a posting occurred or prevent someone importing the same CSV twice. The destination must enforce external-ID uniqueness or reject duplicates.</p>
+    <p class="help-note">This AP ledger check permits one download in the current calculation. A repeat download needs a fresh reconciliation. It does not prove a posting occurred. In NetSuite, map the monthly external ID and import as Add so a duplicate journal is rejected.</p>
   </dialog>
 
   <dialog id="column-help" class="column-help" aria-labelledby="column-help-title">
@@ -127,13 +126,13 @@
       <p>AP: the uninvoiced portion of each receipt through close. Match invoices dated on or before close by receipt_id, or by PO/PO line only when there is one unambiguous receipt. A PO-only match also requires a single-line PO. Partial invoices reduce only their matched receipt. Fully invoiced receipts generate no accrual.</p>
       <p class="help-formula">Accrual (USD) = stored receipt value − matched invoice USD amounts through close</p>
       <p>Example: $100,000 received − $40,000 matched invoices = $60,000 uninvoiced. An invoice dated after close does not reduce this close’s accrual. Approved, posted, paid, and open invoices are eligible; void/cancelled/rejected invoices are ignored. Other or missing statuses need Review.</p>
-      <p>Creates a proposed debit to the PO’s GL account and credit to 2150 — Accrued Expenses — AP. Clean positive residuals start calculation-Ready, but AP export remains locked until the pre-export receipt/GL and external-ID checks are recorded. Ambiguous matches, missing invoice dates/amounts/IDs, duplicate allocations, vendor mismatches, or over-invoicing trigger Review and block AP download.</p>
-      <p class="help-note">Remaining limitations: receipt value is still taken from value_usd, not independently recalculated from quantity × price. The cutoff uses invoice_date, not GL posting date. Existing GL accruals, credits/returns, and foreign-currency conversion are not automatically reconciled. AP calculations use supplied USD values. A self-entered pre-export check does not replace a GL integration or controller approval.</p>
+      <p>Creates a proposed debit to the PO’s GL account and credit to 2150 — Accrued Expenses — AP. Clean positive residuals start calculation-Ready, but AP export remains locked until the receipt/GL check is recorded. Ambiguous matches, missing invoice dates/amounts/IDs, duplicate allocations, vendor mismatches, or over-invoicing trigger Review and block AP download.</p>
+      <p class="help-note">Remaining limitations: receipt value is still taken from value_usd, not independently recalculated from quantity × price. The cutoff uses invoice_date, not GL posting date. Existing GL accruals, credits/returns, and foreign-currency conversion are not automatically reconciled. AP calculations use supplied USD values. A self-entered AP receipt/GL check does not replace a GL integration or controller approval.</p>
       <div id="additional-handler-help"></div>
     </section>
     <section id="status-help" hidden>
       <h3><span class="status ready">Ready</span></h3>
-      <p>No open calculation review flag, or a reviewer has checked a usage flag and marked it Ready. AR starts Ready if no usage event triggers the rule below; AP starts Ready only when its invoice matching has no unresolved issues. Ready does not mean posted or approved for export; a separate pre-export check is still required.</p>
+      <p>No open calculation review flag, or a reviewer has checked a usage flag and marked it Ready. AR starts Ready if no usage event triggers the rule below; AP starts Ready only when its invoice matching has no unresolved issues. Ready does not mean posted. All AR items must be Ready to download AR; AP also needs a receipt/GL reconciliation check.</p>
       <h3><span class="status review">Review</span></h3>
       <p>An AR usage event met the anomaly rule, an AP receipt has an invoice-matching issue, or a previously approved review was reopened. One flagged usage event puts the entire customer/SKU accrual into Review.</p>
       <h3>AP Review calculation and resolution</h3>
@@ -154,7 +153,7 @@
       <p class="help-note">This fixed 2× multiplier is a prototype rule in the code—not a workbook setting or a statistically validated policy. The sample has only one historical event per customer/SKU. With no historical events, this rule does not flag an anomaly; a zero baseline produces a zero threshold.</p>
       <h3>What to do next</h3>
       <p>Open the item’s View details, verify its source records and amount, enter your reviewer name and review note, confirm the check, then select Mark Ready. If the source is wrong, correct the workbook and import it again. Approval changes the status, not the amount.</p>
-      <p>Every accrual on a side must be Ready and the separate pre-export check recorded before that side’s CSV can be downloaded—even if filters hide an item. Review and export checks last only for the current import and reset on refresh, a period change, or a successful workbook import.</p>
+      <p>Every accrual on a side must be Ready before its CSV can be downloaded—even if filters hide an item. AP also needs a receipt/GL reconciliation check. Review decisions and the AP check last only for the current import and reset on refresh, a period change, or a successful workbook import.</p>
     </section>
   </dialog>
 

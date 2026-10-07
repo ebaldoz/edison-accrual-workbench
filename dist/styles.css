@@ -220,11 +220,13 @@ header { flex-wrap:wrap; align-items:flex-start; }
 .count { padding:0; }
 .table-wrap { max-width:100%; }
 table { min-width:56rem; }
-.panel-foot { flex-wrap:wrap; }
-.panel-foot > span { flex:1 1 20rem; }
-.export-actions { display:flex; flex-wrap:wrap; gap:12px; max-width:100%; }
+.panel-foot { flex-wrap:wrap; flex-direction:column; align-items:stretch; }
+.export-actions { display:flex; flex-wrap:wrap; gap:20px; width:100%; }
 .export-actions > div { flex:1 1 14rem; min-width:0; }
 .export-actions p { margin:8px 0 0; font: .875rem/1.6 Helvetica,Arial,sans-serif; color:var(--muted); max-width:26rem; }
+.export-actions .export-id { font: .875rem/1.5 var(--mono); color:var(--ink); overflow-wrap:anywhere; }
+.panel-foot .netsuite-note { margin:0; padding-top:14px; border-top:1px solid var(--line); font:1rem/1.55 Helvetica,Arial,sans-serif; color:var(--ink); }
+.netsuite-note code { font:.875rem/1.5 var(--mono); }
 button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; cursor:not-allowed; filter:none; }
 .control.pending { background:#292820; color:#d0c9ae; }
 #nav-review:empty { display:none; }
@@ -333,7 +335,6 @@ button:focus-visible,a:focus-visible,.upload:focus-within { outline:3px solid #a
   .metrics { grid-template-columns:1fr; }
   .metrics strong { font-size:2rem; }
   .section-title > p { display:block; }
-  .panel-foot > span { flex-basis:auto; }
   .review-card { grid-template-columns:1fr; }
   .review-amount { grid-column:1; }
   .detail-panel { padding:20px; }
