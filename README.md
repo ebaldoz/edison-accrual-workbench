@@ -176,7 +176,7 @@ View details shows receipt value, matched invoiced value, residual, matching rea
 ## Known limitations
 
 - Browser-only state; no shared persistence or authentication.
-- Review decisions are deliberately scoped to the current import in this tab. Refresh or any successful workbook import resets all approvals; a failed import leaves the prior run unchanged. Reviewer names are self-entered, not authenticated. This is a demo UI control, not a tamper-resistant approval system.
+- Review decisions are deliberately scoped to the current calculation in this tab. Refresh, a successful period change, or a successful workbook import resets all approvals; a failed import or period change leaves the prior run unchanged. Reviewer names are self-entered, not authenticated. This is a demo UI control, not a tamper-resistant approval system.
 - Current approval details export as `reviewed_by`, `review_note`, `reviewed_on` (MM/DD/YYYY), and `reviewed_time_utc` (24-hour UTC time). Automatically Ready lines have blank review metadata. The on-screen current-run history retains approval/reopen events but is not a permanent audit archive. Preserve approved exports with their source workbook.
 - XLSX parsing loads SheetJS from a pinned CDN version.
 - FX comes from the latest supplied invoice rather than a governed daily rate source.
