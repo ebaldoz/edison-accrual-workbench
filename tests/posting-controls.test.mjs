@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { AccrualEngine } from "../dist/engine.js";
-import { anchorData } from "../dist/anchor-data.js";
+import { anchorData } from "./fixtures/anchor-data.js";
 import { reviewAccrual } from "../dist/review.js";
 import { getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "../dist/posting-controls.js";
 
