@@ -10,12 +10,13 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Converts the EUR customer's USD-valued usage to a transaction-currency view while booking the journal in USD.
 - Accrues each receipt's uninvoiced USD balance, subtracting valid matched invoices dated through close rather than excluding its entire PO.
 - Flags the seeded usage spike for human review without replacing actual usage.
-- Downloads separate AR and AP CSVs with balanced original accrual lines only. Each journal's header-level `reversal_date` repeats on all its rows; no reversing-entry rows are generated.
+- Downloads separate AR and AP CSVs with balanced original accrual lines only. Each journal's header-level `reversal_date` repeats on all its rows; no reversing-entry rows are generated. Download also requires a current pre-export check, separate from calculation status.
 - Uses one deterministic external ID per year-month and side (e.g. `HELIX-2026-03-AR` and `HELIX-2026-03-AP`). Re-runs reuse these journal IDs, not new journals.
 - Preserves the original source-group identifier as `accrual_id`, adds unique `line_id` values ending in `-DR` or `-CR`, and retains `source_ref` on every row for audit.
 - Provides source drill-through from each accrual to event or receipt identifiers.
 - Allows current-run review of usage flags: verify the source/amount, enter a reviewer name and note, check the confirmation, and choose Mark Ready. Both journal lines become Ready; the original anomaly and amount are preserved. Reviewed items can be reopened with a reason. AP matching exceptions require corrected source data and reimport; they cannot be waived with a review note.
 - Disables each side's download until every accrual line on that side is Ready. Empty sides are disabled too. This rule is also checked by the CSV formatter, not just the button.
+- Before export, the controller must attest that the monthly external ID is absent from NetSuite and enter an evidence reference. AP additionally requires an as-of-close receipt/accrued-liability GL reconciliation confirming none of the proposed amount is already recorded. The app does not query NetSuite: if either check cannot be confirmed, do not export. The checker, evidence, and UTC check time are repeated on exported lines. Each download consumes its check; another download requires a fresh NetSuite search.
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
 - Opens the control-design explanation in a modal from the information button beside the import-status heading or from Controls in the sidebar.
 
@@ -30,7 +31,7 @@ npm test
 npm run serve
 ```
 
-Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook and results. The workbook is not saved to a database or browser storage.
+Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Resolve any Review items, then use **Check AR export** or **Check AP export** to record the NetSuite external-ID check; AP also requires receipt/GL reconciliation. Only then can that side's CSV be downloaded. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook, results, and export checks. The workbook is not saved to a database or browser storage.
 
 ## Import workbook requirements
 
@@ -60,13 +61,21 @@ The browser app separates the close workflow into four layers:
 2. **Handler registry** validates plugin metadata, rejects duplicate keys, and selects all registered handlers by default (or a requested subset).
 3. **Accrual engine** validates only the selected handlers' worksheets and checks each plugin's returned accrual and balanced lines against a common contract.
 4. **Handlers** own source-specific accounting logic in separate modules. `UsageAccrualHandler` and `ReceiptAccrualHandler` implement the required scenarios.
-5. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads. The exporter selects every line by AR/AP side, so multiple handlers on the same side share the monthly journal.
+5. **Posting controls** require a current, journal-specific human check of the NetSuite external ID and, for AP, existing receipt/GL accruals. The check is invalidated when lines change, consumed by one download, and reset by reimport, period change, or refresh. It is an attestation, not a live ledger lookup.
+6. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads. The exporter selects every line by AR/AP side, so multiple handlers on the same side share the monthly journal.
 
-The implementation is static by design: this is a reviewable proof of concept, not a production posting service. Deterministic IDs demonstrate idempotent intent. A production implementation would enforce uniqueness in a database and in NetSuite's external-ID field.
+The implementation is static by design: this is a reviewable proof of concept, not a production posting service. Deterministic IDs and the pre-export search reduce duplicate risk, but self-attestation does **not** guarantee idempotent posting. A production integration must reject or reconcile an existing journal external ID atomically in NetSuite and enforce uniqueness in its own database.
+
+### Data model and technology choices
+
+- **Source records:** named workbook sheets hold customer, SKU, usage, invoice, PO, receipt, and vendor facts. `event_id` and `receipt_id` remain traceable in `source_ref` and the detail view. The browser parses the workbook into sheet-specific row arrays; it does not persist or modify the source file.
+- **Close result:** one in-memory run has `runId`, `closeDate`, `reversalDate`, `accruals`, `journalLines`, totals, and a balance control. Each accrual has a stable ID, handler/side, source payload, amount, and calculation-review status. Its debit and credit lines share `accrual_id` but have distinct `line_id` values. All lines on one side/period share a monthly `external_id`.
+- **Human controls:** current-run review decisions apply to individual accruals; one-use export checks apply to a whole AR or AP journal. Export checks record checker, evidence reference, and time, and are bound to the exact journal contents. Neither is authenticated or durable in this prototype.
+- **Technology rationale:** static HTML/CSS and ES modules keep the calculation and plugin boundary easy to inspect without a server or build step. SheetJS parses XLSX in the browser, so source files need not be uploaded to a service. Node's built-in test runner checks calculations, plugin contracts, review controls, and CSV output without extra test infrastructure. Private static hosting suits this demonstration; the trade-off is no shared database, live NetSuite lookup, verified identity, or authoritative duplicate-post lock.
 
 ### Future database period scope
 
-There is **no accruals database in this prototype**. When persistence is added, each calculated accrual should carry an accounting-period key such as `2026-03` (plus entity/book dimensions if applicable). The Accruals table, review queue, totals, and CSV exports must query only the selected period—for example, `WHERE period_key = :selected_period`—and must never carry rows or review decisions from a previously selected month into the new view. Imported source snapshots and close runs should be linked to that period so the month-specific calculation remains auditable.
+There is **no accruals database in this prototype**. When persistence is added, each calculated accrual should carry an accounting-period key such as `2026-03` (plus entity/book dimensions if applicable). The Accruals table, review queue, totals, export checks, and CSV exports must query only the selected period—for example, `WHERE period_key = :selected_period`—and must never carry rows or decisions from a previously selected month into the new view. Imported source snapshots and close runs should be linked to that period so the month-specific calculation remains auditable.
 
 ## Where to add or edit a handler
 
@@ -87,12 +96,12 @@ The plugin boundary is intentionally limited to the existing AR/AP journal sides
 - The selected period's month-end is the posting date and calculation cutoff; the reversal date is the first calendar day of the next month (not adjusted for weekends or holidays). March 2026 is the initial selection.
 - Group CSV rows by `external_id` into journals. Map `posting_date`, `reversal_date`, and `currency` to journal-header fields, not journal-line fields. The export checks that these values are consistent within each journal. Map account/debit/credit to line fields. The destination system must process the reversal; the app does not post or schedule one.
 - CSV date columns use `MM/DD/YYYY` (e.g. `03/31/2026`, `04/01/2026`); engine dates and source payloads remain ISO. IDs and filenames keep their machine-readable year-month/date tokens.
-- Map `line_id`, `accrual_id`, and `source_ref` to line-level audit fields, and `memo` to the line memo. Transaction-currency amounts/rates are source-level reference fields; the journal currency is USD, including Berlin's lines. March AR is one six-line journal; March AP is one two-line journal. No customer/source-level lines are consolidated or discarded.
-- Reimporting a monthly external ID requires a deliberate update/reject policy in the destination; the demo does not enforce posting idempotency or retain immutable source snapshots. Archive the source workbook and exported CSV together for audit. Multiple entities/books would need an additional journal-key dimension before production use.
+- Map `line_id`, `accrual_id`, and `source_ref` to line-level audit fields, and `memo` to the line memo. The exported `posting_checked_by`, `posting_check_evidence`, `posting_checked_on`, `posting_checked_time_utc`, and `ap_gl_not_recorded_confirmed` fields carry self-entered pre-export evidence; map them only to appropriate custom/audit fields or retain them in the archived export. Transaction-currency amounts/rates are source-level reference fields; the journal currency is USD, including Berlin's lines. March AR is one six-line journal; March AP is one two-line journal. No customer/source-level lines are consolidated or discarded.
+- Reimporting a monthly external ID requires a deliberate **reject-or-reconcile** policy in the destination. Search for the ID before export; if it already exists, stop rather than treating a second CSV as a new journal. For true idempotency, the posting integration must enforce the ID atomically in NetSuite and persist a source/run fingerprint; this browser demo cannot prevent a second manual import of the same CSV. Archive the source workbook, export-check evidence, and CSV together. Multiple entities/books would need an additional journal-key dimension before production use.
 - Usage after each customer's latest invoice period end through close is accrued.
 - The price book is USD-denominated. USD is the NetSuite posting currency. For the EUR customer, the UI derives a transaction-currency amount at 1.08 USD/EUR and retains the rate on every line.
 - The actual 25-hour spike remains in revenue; it is routed to review rather than smoothed.
-- AP calculates receipt-level uninvoiced value using the invoice-date cutoff and matching rules below. This is a proposed accrual, not the additional adjustment after reconciling existing GL postings.
+- AP calculates receipt-level uninvoiced value using the invoice-date cutoff and matching rules below. This is a **proposed balance**, not an additional adjustment after reconciling existing GL postings. Before AP export, check whether the goods receipt or another entry already recorded any of that balance. If so, do not attest or download; this prototype cannot calculate a partial incremental adjustment.
 - The partial receipt is capitalized to account 1480 with an offset to accrued expenses 2150.
 
 ## AI / ML rationale
@@ -101,7 +110,7 @@ For this dataset, a transparent rule is safer than an opaque model. The detector
 
 ## Test coverage
 
-The tests verify anchor totals, EUR translation, anomaly routing, receipt/line matching, partial and multiple invoices, invoice/receipt cutoff boundaries, ambiguous matches, duplicate allocations, invoice-header reconciliation, invalid fields, over-invoicing, source correction, download gates, deterministic IDs, balanced entries, source references, AR/AP separation, selected-period month-end and next-month dates (including leap years and year rollover), and consistent header reversal dates with no reversal rows.
+The tests verify anchor totals, EUR translation, anomaly routing, receipt/line matching, partial and multiple invoices, invoice/receipt cutoff boundaries, ambiguous matches, duplicate allocations, invoice-header reconciliation, invalid fields, over-invoicing, source correction, calculation and pre-export download gates, journal-specific attestations and invalidation, evidence in CSV, deterministic IDs, balanced entries, source references, AR/AP separation, selected-period month-end and next-month dates (including leap years and year rollover), and consistent header reversal dates with no reversal rows.
 
 ## Deployment recommendation
 
@@ -111,7 +120,7 @@ This static proof of concept fits static hosting, including the existing private
 
 - Persist raw source snapshots, normalized records, close runs, decisions, and journal lines in Postgres.
 - Use an orchestrator and queues for Chargebee, telemetry, Coupa, FX, and NetSuite integrations.
-- Enforce database uniqueness on `(entity, period, handler, source_ref)` and NetSuite external IDs.
+- Enforce database uniqueness on `(entity, period, handler, source_ref)` and a NetSuite external-ID reject/reconcile policy with posting-status readback; replace self-entered checks with a live GL and journal search.
 - Add legal entity, subsidiary, department, class, location, tax, book, and accounting-period dimensions.
 - Extend the implemented receipt/line invoice matching with quantity/value tolerances, returns/credits, posting-period controls, and GL reconciliation.
 - Add approvals, role-based access, immutable audit events, observability, retries, and reconciliation back from NetSuite.
@@ -122,8 +131,8 @@ This static proof of concept fits static hosting, including the existing private
 1. Include each goods-receipt line with `received_on <= closeDate` (March 31, 2026 in the demo). Validate receipt identifiers, dates, USD values, and PO/PO-line references. Missing or duplicate receipt/master keys fail the calculation instead of silently exporting bad data.
 2. Consider vendor invoices with `invoice_date <= closeDate`. Eligible statuses are `approved`, `posted`, `paid`, and `open` (case-insensitive). Ignore `void`, `voided`, `cancelled`, `canceled`, and `rejected`. Missing/other statuses require Review. This is a prototype invoice-date policy, not a NetSuite posting-date/period policy.
 3. Match a supplied `receipt_id`, constrained by any supplied PO/line references. Otherwise use `po_number` plus `po_line_ref` only if they identify one receipt. A PO-only invoice can match only when there is one receipt and one PO line. Uniqueness considers all supplied receipts, including future receipts, to avoid treating a broad reference as unique merely because of the cutoff. No FIFO or proportional split is guessed.
-4. Subtract matched invoice USD amounts from that receipt's stored `value_usd`, using integer cents. Multiple invoices can reduce the same receipt. A clean zero balance generates no accrual. A positive balance creates one debit/credit pair, with the existing monthly AP external ID and reversal-date header.
-5. Uncertain matches retain a provisional balance and Review. Over-invoicing retains a zero-dollar Review exception, rather than disappearing or creating a negative accrual. Correct the workbook and reimport to resolve matching issues. AP download stays locked until every AP item is Ready; Mark Ready cannot bypass these exceptions.
+4. Subtract matched invoice USD amounts from that receipt's stored `value_usd`, using integer cents. Multiple invoices can reduce the same receipt. A clean zero balance generates no accrual. A positive proposed balance creates one debit/credit pair, with the existing monthly AP external ID and reversal-date header. This is not yet net of any liability already posted from the goods receipt.
+5. Uncertain matches retain a provisional balance and Review. Over-invoicing retains a zero-dollar Review exception, rather than disappearing or creating a negative accrual. Correct the workbook and reimport to resolve matching issues. AP download stays locked until every AP item is Ready **and** the separate NetSuite external-ID and receipt/GL checks are recorded; Mark Ready cannot bypass matching exceptions.
 
 The supplied workbook has invoice-level columns only and no vendor invoices. It needs no changes to reproduce the $100,000 anchor result. For additional scenarios, add the optional matching/allocation columns to `vendor_invoices`:
 
@@ -167,7 +176,7 @@ View details shows receipt value, matched invoiced value, residual, matching rea
 
 ### 3. Check existing GL postings to prevent double counting
 
-- **Today:** the handler does not check whether NetSuite already recorded the receipt's asset/expense and accrued liability.
+- **Today:** the handler does not automatically check whether NetSuite already recorded the receipt's asset/expense and accrued liability. AP CSV download requires a controller to record a receipt/GL reconciliation attestation and evidence reference confirming none of the proposed balance is already recorded. If there is an existing or partial posting, do not attest; the app does not calculate the additional adjustment.
 - **Production:** reconcile receipt-level GL impact, matched bills, prior manual accruals, and reversals as of close. Generate only the additional adjustment needed to reach the required balance. Use source-linked posting records and enforce duplicate prevention when rerunning a close.
 - **Example:** if the full required $100,000 receipt accrual is already recorded, the additional accrual is $0. If $60,000 remains uninvoiced but that balance is already in Accrued Purchases, do not accrue it again. Do not subtract the same invoice effect twice when reconciling invoice data and GL balances.
 
@@ -179,9 +188,9 @@ View details shows receipt value, matched invoiced value, residual, matching rea
 
 ## Known limitations
 
-- Browser-only state; no shared persistence or authentication.
+- Browser-only state; no shared persistence or authentication. Pre-export checks are self-entered, reset on a new calculation, and cannot replace authoritative NetSuite duplicate-ID and GL reconciliation controls.
 - Review decisions are deliberately scoped to the current calculation in this tab. Refresh, a successful change to another period, or a successful workbook import clears approvals; a period change also clears the imported workbook and all results. A failed import or invalid period selection leaves the prior run unchanged. Reviewer names are self-entered, not authenticated. This is a demo UI control, not a tamper-resistant approval system.
-- Current approval details export as `reviewed_by`, `review_note`, `reviewed_on` (MM/DD/YYYY), and `reviewed_time_utc` (24-hour UTC time). Automatically Ready lines have blank review metadata. The on-screen current-run history retains approval/reopen events but is not a permanent audit archive. Preserve approved exports with their source workbook.
+- Current approval details export as `reviewed_by`, `review_note`, `reviewed_on` (MM/DD/YYYY), and `reviewed_time_utc` (24-hour UTC time). Export-check details use separate `posting_checked_*` fields and an AP GL confirmation field. Automatically Ready lines have blank calculation-review metadata. The on-screen current-run history retains approval/reopen events but is not a permanent audit archive. Preserve approved exports with their source workbook and external evidence.
 - XLSX parsing loads SheetJS from a pinned CDN version.
 - FX comes from the latest supplied invoice rather than a governed daily rate source.
 - The anomaly baseline is intentionally simple because the anchor has one historical event per customer/SKU.
