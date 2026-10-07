@@ -104,12 +104,16 @@
     <p id="posting-check-journal" class="posting-check-id"></p>
     <p>This app cannot query NetSuite and does not post entries. Reconcile the live receipt and accrued-liability GL balances before attesting. If any proposed AP amount is already recorded, stop and reconcile outside this prototype.</p>
     <p id="posting-check-existing" class="help-note"></p>
-    <form id="posting-check-form">
+    <section id="posting-check-summary" aria-label="Recorded AP check" hidden>
+      <dl class="posting-check-details"><div><dt>Checked by</dt><dd id="posting-check-summary-name"></dd></div><div><dt>Checked at</dt><dd id="posting-check-summary-time"></dd></div><div><dt>Evidence reference</dt><dd id="posting-check-summary-evidence"></dd></div></dl>
+      <div class="posting-check-buttons"><button id="recheck-posting-check" type="button">Recheck AP receipt / GL</button><button id="revoke-posting-check" type="button">Revoke check</button></div>
+    </section>
+    <form id="posting-check-form" hidden>
       <label for="posting-check-name">Checker name</label><input id="posting-check-name" required maxlength="100" autocomplete="name" />
       <label for="posting-check-evidence">Receipt / GL reconciliation evidence reference</label><textarea id="posting-check-evidence" required maxlength="1000" rows="3" placeholder="Example: GL report reference, receipt IDs, and as-of date"></textarea>
       <label class="posting-check-confirm"><input id="posting-check-gl" type="checkbox" required />I reconciled every proposed AP receipt against goods-receipt and accrued-liability GL postings as of close. None of the proposed amount is already recorded.</label>
       <p id="posting-check-error" role="alert" hidden></p>
-      <div class="posting-check-buttons"><button type="submit">Record check</button><button id="revoke-posting-check" type="button" hidden>Revoke prior check</button></div>
+      <div class="posting-check-buttons"><button type="submit">Record check</button></div>
     </form>
     <p class="help-note">This AP ledger check stays valid for the current AP journal, including repeat downloads of the same CSV. It resets if that journal changes, the workbook is reimported, the period changes, or the page refreshes; you can also revoke it. Downloading does not prove a posting occurred. In NetSuite, map the monthly external ID and import as Add so a duplicate journal is rejected.</p>
   </dialog>

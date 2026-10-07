@@ -60,6 +60,7 @@ function renderEmpty() {
     $(`#export-${side}-id`).hidden = true;
   }
   $("#check-ap-export").disabled = true;
+  $("#check-ap-export").textContent = "Check AP receipt / GL";
   for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = true;
   $("#clear-filters").disabled = true;
 }
@@ -113,7 +114,8 @@ function render() {
     const key = side.toLowerCase();
     if (side === "AP") {
       $("#check-ap-export").disabled = !calculated.allowed;
-      $("#check-ap-export").title = calculated.allowed ? "Reconcile AP receipt and GL balances" : calculated.reason;
+      $("#check-ap-export").textContent = state.allowed ? "View AP check" : "Check AP receipt / GL";
+      $("#check-ap-export").title = !calculated.allowed ? calculated.reason : state.allowed ? "View the recorded AP receipt / GL check" : "Reconcile AP receipt and GL balances";
     }
     $(`#export-${key}-csv`).disabled = !state.allowed;
     $(`#export-${key}-csv`).title = state.reason;
@@ -334,14 +336,27 @@ function openPostingCheck(side, opener) {
   $("#posting-check-error").hidden = true;
   $("#posting-check-title").textContent = "AP receipt / GL check";
   $("#posting-check-journal").textContent = `Monthly external ID: ${journalIdForSide(result, side)}`;
-  $("#revoke-posting-check").hidden = !result.postingChecks?.[side];
-  $("#posting-check-existing").textContent = result.postingChecks?.[side]
-    ? `Current check recorded by ${result.postingChecks[side].reviewer}. Recording a new check replaces it.`
-    : "No check recorded for this calculation.";
+  const currentCheck = getPostingAvailability(result, side).allowed ? result.postingChecks?.[side] : null;
+  $("#posting-check-summary").hidden = !currentCheck;
+  $("#posting-check-form").hidden = Boolean(currentCheck);
+  $("#posting-check-existing").textContent = currentCheck
+    ? "A check is recorded for this AP journal. You can download the AP CSV again without rechecking."
+    : "No current check is recorded for this AP journal.";
+  if (currentCheck) {
+    $("#posting-check-summary-name").textContent = currentCheck.reviewer;
+    $("#posting-check-summary-time").textContent = `${formatOutputDate(currentCheck.checkedAt.slice(0, 10))} ${currentCheck.checkedAt.slice(11, 19)} UTC`;
+    $("#posting-check-summary-evidence").textContent = currentCheck.evidence;
+  }
   $("#posting-check").showModal();
   $("#posting-check-title").focus();
 }
 $("#check-ap-export").addEventListener("click", event => openPostingCheck("AP", event.currentTarget));
+$("#recheck-posting-check").addEventListener("click", () => {
+  $("#posting-check-summary").hidden = true;
+  $("#posting-check-form").hidden = false;
+  $("#posting-check-existing").textContent = "Record a new check to replace the current one. Until then, the current check remains valid.";
+  $("#posting-check-name").focus();
+});
 $("#posting-check-form").addEventListener("submit", event => {
   event.preventDefault();
   try {
