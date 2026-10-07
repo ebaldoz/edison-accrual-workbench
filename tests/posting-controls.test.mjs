@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { AccrualEngine } from "../dist/engine.js";
 import { anchorData } from "../dist/anchor-data.js";
 import { reviewAccrual } from "../dist/review.js";
-import { consumePostingControlledCsv, getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "../dist/posting-controls.js";
+import { getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "../dist/posting-controls.js";
 
 const run = () => new AccrualEngine().run(structuredClone(anchorData));
 const evidence = { reviewer: "Controller A", evidence: "GL reconciliation GR-2026-0042 as of 03/31/2026", apGlNotRecorded: true };
@@ -40,12 +40,14 @@ test("a recorded AP check unlocks export and puts its evidence on every CSV line
   assert.equal(csv.match(/"04\/01\/2026","10:20:30","Yes"/g)?.length, 2);
 });
 
-test("one AP receipt/GL check permits one download; a repeat needs a fresh reconciliation", () => {
+test("the current AP receipt/GL check permits repeat downloads of unchanged CSV", () => {
   const result = run();
   recordPostingCheck(result, "AP", evidence, checkedAt);
-  assert.match(consumePostingControlledCsv(result, "AP"), /HELIX-2026-03-AP/);
-  assert.equal(getPostingAvailability(result, "AP").allowed, false);
-  assert.throws(() => consumePostingControlledCsv(result, "AP"), /reconciliation required/);
+  const first = toPostingControlledCsv(result, "AP");
+  assert.match(first, /HELIX-2026-03-AP/);
+  assert.equal(getPostingAvailability(result, "AP").allowed, true);
+  assert.equal(toPostingControlledCsv(result, "AP"), first);
+  assert.equal(getPostingAvailability(result, "AP").allowed, true);
 });
 
 test("AR review must finish before download, but no manual export check is needed", () => {
@@ -55,9 +57,9 @@ test("AR review must finish before download, but no manual export check is neede
     { reviewer: "Controller A", note: "Verified usage event", confirmed: true });
   assert.equal(getPostingAvailability(result, "AR").allowed, true);
   assert.equal(getPostingAvailability(result, "AP").allowed, false);
-  const first = consumePostingControlledCsv(result, "AR");
+  const first = toPostingControlledCsv(result, "AR");
   assert.match(first, /HELIX-2026-03-AR/);
-  assert.equal(consumePostingControlledCsv(result, "AR"), first);
+  assert.equal(toPostingControlledCsv(result, "AR"), first);
   assert.doesNotMatch(first, /"Controller A","GL reconciliation/);
 });
 
