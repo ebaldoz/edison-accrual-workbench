@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { AccrualEngine, HandlerRegistry, ReceiptAccrualHandler, UsageAccrualHandler, getExportAvailability, toJournalCsv } from "../dist/engine.js";
 import { makeAccrualLines } from "../dist/handler-kit.js";
-import { anchorData } from "../dist/anchor-data.js";
+import { anchorData } from "./fixtures/anchor-data.js";
 
 // A third handler lives outside the engine. It uses only the public plugin contract.
 class ExampleSubscriptionHandler {
