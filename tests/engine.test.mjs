@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { AccrualEngine, ReceiptAccrualHandler, UsageAccrualHandler, toJournalCsv, formatOutputDate, getExportAvailability } from "../dist/engine.js";
 import { reviewAccrual, filterAccruals } from "../dist/review.js";
-import { anchorData } from "../dist/anchor-data.js";
+import { anchorData } from "./fixtures/anchor-data.js";
 
 test("anchor accruals reconcile to expected AR and AP amounts", () => {
   const result = new AccrualEngine().run(structuredClone(anchorData));
