@@ -24,7 +24,6 @@ h1,h2,h3,p { margin-top:0; } h1 { font:700 32px "Manrope",sans-serif; margin-bot
 .eyebrow { font-size:10px; font-weight:700; letter-spacing:.13em; color:#71807a; margin-bottom:7px; }
 .header-actions { display:flex; gap:10px; }
 .header-actions button,.upload { border:1px solid #cfd8d3; background:#fff; border-radius:8px; padding:10px 15px; cursor:pointer; font-weight:600; font-size:13px; }
-.header-actions .primary { background:var(--green); color:#fff; border-color:var(--green); box-shadow:0 4px 12px #174a3930; }
 .upload input { display:none; }
 .error-banner { background:#fff0ed; color:#8d3027; border:1px solid #f1c8c2; padding:12px 14px; border-radius:8px; margin-bottom:16px; font-size:13px; }
 .run-banner { background:#e8efe8; border:1px solid #d2ded5; padding:13px 16px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; }
@@ -110,8 +109,6 @@ h3 { font:12px var(--mono); text-transform:uppercase; margin:26px 0 12px; }
 .eyebrow:before { content:"// "; color:#9b7dff; }
 .header-actions { flex:none; }
 .header-actions button,.upload { border:1px solid #65655d; color:var(--ink); background:transparent; border-radius:0; padding:13px 16px; font:11px var(--mono); text-transform:uppercase; letter-spacing:.03em; }
-.header-actions .primary { background:#6038ef; color:#fff; border-color:#6038ef; box-shadow:none; }
-.primary:hover { filter:brightness(1.18); }
 .upload { position:relative; overflow:hidden; display:inline-flex; align-items:center; }
 .upload input { display:block; position:absolute; inset:0; opacity:0; width:100%; cursor:pointer; }
 .error-banner { background:#331b23; color:#ffd3d3; border-color:#8c485e; border-radius:0; }
@@ -228,7 +225,6 @@ table { min-width:56rem; }
 .export-actions > div { flex:1 1 14rem; min-width:0; }
 .export-actions p { margin:8px 0 0; font: .875rem/1.6 Helvetica,Arial,sans-serif; color:var(--muted); max-width:26rem; }
 button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; cursor:not-allowed; filter:none; }
-.header-actions .primary:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; }
 .control.pending { background:#292820; color:#d0c9ae; }
 #nav-review:empty { display:none; }
 .panel-foot button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; }

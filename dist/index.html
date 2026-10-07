@@ -31,7 +31,6 @@
       <div><p class="eyebrow">MARCH 2026 CLOSE</p><h1>Accrual workbench</h1></div>
       <div class="header-actions">
         <label class="upload" title="Load an Excel workbook and calculate its accruals">Import workbook<input id="file-input" aria-label="Import workbook" type="file" accept=".xlsx,.xls" /></label>
-        <button id="run-close" class="primary" title="Import a workbook to enable Run close" disabled>Run close</button>
       </div>
     </header>
 
@@ -70,7 +69,7 @@
     </section>
 
     <section id="review" class="review-section">
-      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Usage flags can be reviewed and approved. AP matching issues require corrected source data and reimport. Approvals reset on refresh, Run close, or workbook import.</p></div>
+      <div class="section-title"><div><p class="eyebrow">HUMAN-IN-THE-LOOP</p><h2>Review queue</h2></div><p>Open an item to see what needs attention. Usage flags can be reviewed and approved. AP matching issues require corrected source data and reimport. Approvals reset on refresh or workbook import.</p></div>
       <div id="review-list"><div class="empty">Import an XLSX workbook to see review items.</div></div>
     </section>
 
@@ -118,7 +117,7 @@
       <p class="help-note">This fixed 2× multiplier is a prototype rule in the code—not a workbook setting or a statistically validated policy. The sample has only one historical event per customer/SKU. With no historical events, this rule does not flag an anomaly; a zero baseline produces a zero threshold.</p>
       <h3>What to do next</h3>
       <p>Open the item’s View details, verify its source records and amount, enter your reviewer name and review note, confirm the check, then select Mark Ready. If the source is wrong, correct the workbook and import it again. Approval changes the status, not the amount.</p>
-      <p>Every accrual on a side must be Ready before that side’s CSV can be downloaded—even if filters hide an item. Review decisions last only for the current run and reset on refresh, Run close, or a successful workbook import.</p>
+      <p>Every accrual on a side must be Ready before that side’s CSV can be downloaded—even if filters hide an item. Review decisions last only for the current import and reset on refresh or a successful workbook import.</p>
     </section>
   </dialog>
 

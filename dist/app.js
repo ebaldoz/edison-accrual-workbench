@@ -2,10 +2,8 @@ import { AccrualEngine, toJournalCsv, validateDataset, formatOutputDate, getExpo
 import { filterAccruals, reviewAccrual } from "./review.js";
 
 const engine = new AccrualEngine();
-let data = null;
 let result;
 let selectedId = null;
-let datasetName = "No workbook loaded";
 const filters = { side: "", counterparty: "", status: "", handler: "" };
 
 const money = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
@@ -16,9 +14,7 @@ function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
 }
 
-function runClose() {
-  if (!data) return;
-  result = engine.run(data, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
+function showImportedResult(filename) {
   selectedId = null;
   $("#detail-panel").classList.remove("open");
   $("#overlay").classList.remove("show");
@@ -26,10 +22,8 @@ function runClose() {
   $("main").inert = false;
   $("#sidebar").inert = false;
   $("#run-state").textContent = "Calculation complete — no entries posted";
-  $("#dataset-name").textContent = datasetName;
+  $("#dataset-name").textContent = filename;
   $("#import-error").hidden = true;
-  $("#run-close").disabled = false;
-  $("#run-close").title = "Recalculate the imported workbook; no entries are posted";
   render();
 }
 
@@ -50,7 +44,6 @@ function renderEmpty() {
     $(`#export-${side}-csv`).disabled = true;
     $(`#export-${side}-reason`).textContent = "Import a workbook before downloading.";
   }
-  $("#run-close").disabled = true;
   for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = true;
   $("#clear-filters").disabled = true;
 }
@@ -110,7 +103,7 @@ function reviewSection(item) {
       <p id="review-error" role="alert" hidden></p>
       <button class="review-submit" type="submit">${approved ? "Reopen review" : "Mark Ready"}</button>
     </form>
-    <p class="session-note">Current run only. Refresh, Run close, or a new workbook import resets approvals. Names are self-entered, not verified identities.</p>
+    <p class="session-note">Current import only. Refresh or import a workbook again to reset approvals. Names are self-entered, not verified identities.</p>
     ${history.length ? `<details><summary>Review history for this run (${history.length})</summary><ul>${history.map(event => `<li>${event.action === "approve" ? "Marked Ready" : "Reopened"} by ${escapeHtml(event.reviewer)} · ${formatOutputDate(event.reviewedAt.slice(0,10))} ${event.reviewedAt.slice(11,19)} UTC — ${escapeHtml(event.note)}</li>`).join("")}</ul></details>` : ""}
   </section>`;
 }
@@ -208,18 +201,11 @@ async function importWorkbook(file) {
     sheets[name] = window.XLSX.utils.sheet_to_json(workbook.Sheets[name], { defval: "", raw: true });
   }
   validateDataset(sheets);
-  engine.run(sheets, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
-  data = sheets;
-  datasetName = file.name;
-  runClose();
+  const nextResult = engine.run(sheets, { closeDate: "2026-03-31", reversalDate: "2026-04-01" });
+  result = nextResult;
+  showImportedResult(file.name);
 }
 
-$("#run-close").addEventListener("click", () => {
-  try { runClose(); } catch (error) {
-    $("#import-error").textContent = error.message;
-    $("#import-error").hidden = false;
-  }
-});
 $("#export-ar-csv").addEventListener("click", () => downloadCsv("AR"));
 $("#export-ap-csv").addEventListener("click", () => downloadCsv("AP"));
 for (const key of Object.keys(filters)) {
