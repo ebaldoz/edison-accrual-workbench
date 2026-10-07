@@ -115,7 +115,7 @@ The tests verify anchor totals, EUR translation, anomaly routing, receipt/line m
 
 ## Deployment recommendation
 
-This static proof of concept fits static hosting, including the existing private OpenAI Sites deployment. Keep the source repository and deployment private because the exercise is confidential. Use an authenticated email allowlist for any reviewer sharing; an unguessable URL is not access control.
+This static proof of concept is live on [GitHub Pages](https://ebaldoz.github.io/helix-accrual-workbench/) and remains available on the existing private OpenAI Sites deployment. The [Pages workflow](.github/workflows/deploy-pages.yml) runs automated tests and publishes the `dist` app while excluding `anchor-data.js`, which contains sample test records. Workbook import and calculations run in the visitor’s browser; GitHub Pages does not store the imported file or review decisions. The GitHub Pages site is public even though this source repository remains private. For confidential reviewer access, use the private deployment with an authenticated allowlist; an unguessable URL is not access control.
 
 ## What I would change for production
 
