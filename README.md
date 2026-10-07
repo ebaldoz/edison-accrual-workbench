@@ -5,7 +5,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 ## What it does
 
 - Opens with no workbook or calculated results. Import the supplied XLSX workbook each time the page loads; successful import runs the close automatically.
-- Selects a close period using a year and a 3-column by 4-row grid of abbreviated months. The posting date is that month's last calendar day; the reversal date is the first calendar day of the following month, including across years. The initial selection is March 2026. Changing the period after import recalculates the in-memory workbook and resets review decisions.
+- Selects a close period using a year and a 3-column by 4-row grid of abbreviated months. The posting date is that month's last calendar day; the reversal date is the first calendar day of the following month, including across years. The initial selection is March 2026. Changing to a different period clears the imported workbook, accruals, totals, review decisions, and downloads; the user must import a workbook for that period.
 - Calculates usage-based AR for the unbilled period after the latest Chargebee invoice.
 - Converts the EUR customer's USD-valued usage to a transaction-currency view while booking the journal in USD.
 - Accrues each receipt's uninvoiced USD balance, subtracting valid matched invoices dated through close rather than excluding its entire PO.
@@ -19,7 +19,7 @@ A controller-facing proof of concept for a single accrual engine that handles un
 - Filters the accrual table by Side, Counterparty, Status, and Handler in combination. Filters do not change metrics, the review queue, download readiness, or the rows included in downloads.
 - Opens the control-design explanation in a modal from the information button beside the import-status heading or from Controls in the sidebar.
 
-For the default March 2026 period, importing the supplied anchor workbook produces **AR $362.50** and **AP $100,000.00**. Other periods can produce different accruals because the selected month-end is also the calculation cutoff. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
+For the default March 2026 period, importing the supplied anchor workbook produces **AR $362.50** and **AP $100,000.00**. After selecting another period and importing a workbook, results may differ because that month's end is the calculation cutoff. The sample records remain in `dist/anchor-data.js` as automated-test fixtures; the website does not load them at startup.
 
 ## Run locally
 
@@ -30,7 +30,7 @@ npm test
 npm run serve
 ```
 
-Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Changing the period reruns the imported workbook; to recalculate corrected source data, import the corrected workbook. A refresh clears the in-browser workbook and results; import again to continue. The workbook is not saved to a database or browser storage.
+Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook and results. The workbook is not saved to a database or browser storage.
 
 ## Import workbook requirements
 
@@ -63,6 +63,10 @@ The browser app separates the close workflow into four layers:
 5. **Outputs and controls** render the review queue, source evidence, balanced original journal lines, reversal-date metadata, and separate AR/AP CSV downloads. The exporter selects every line by AR/AP side, so multiple handlers on the same side share the monthly journal.
 
 The implementation is static by design: this is a reviewable proof of concept, not a production posting service. Deterministic IDs demonstrate idempotent intent. A production implementation would enforce uniqueness in a database and in NetSuite's external-ID field.
+
+### Future database period scope
+
+There is **no accruals database in this prototype**. When persistence is added, each calculated accrual should carry an accounting-period key such as `2026-03` (plus entity/book dimensions if applicable). The Accruals table, review queue, totals, and CSV exports must query only the selected period—for example, `WHERE period_key = :selected_period`—and must never carry rows or review decisions from a previously selected month into the new view. Imported source snapshots and close runs should be linked to that period so the month-specific calculation remains auditable.
 
 ## Where to add or edit a handler
 
@@ -176,7 +180,7 @@ View details shows receipt value, matched invoiced value, residual, matching rea
 ## Known limitations
 
 - Browser-only state; no shared persistence or authentication.
-- Review decisions are deliberately scoped to the current calculation in this tab. Refresh, a successful period change, or a successful workbook import resets all approvals; a failed import or period change leaves the prior run unchanged. Reviewer names are self-entered, not authenticated. This is a demo UI control, not a tamper-resistant approval system.
+- Review decisions are deliberately scoped to the current calculation in this tab. Refresh, a successful change to another period, or a successful workbook import clears approvals; a period change also clears the imported workbook and all results. A failed import or invalid period selection leaves the prior run unchanged. Reviewer names are self-entered, not authenticated. This is a demo UI control, not a tamper-resistant approval system.
 - Current approval details export as `reviewed_by`, `review_note`, `reviewed_on` (MM/DD/YYYY), and `reviewed_time_utc` (24-hour UTC time). Automatically Ready lines have blank review metadata. The on-screen current-run history retains approval/reopen events but is not a permanent audit archive. Preserve approved exports with their source workbook.
 - XLSX parsing loads SheetJS from a pinned CDN version.
 - FX comes from the latest supplied invoice rather than a governed daily rate source.
