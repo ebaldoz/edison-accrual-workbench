@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { periodDates, periodLabel } from "../dist/period.js";
 import { AccrualEngine, toJournalCsv } from "../dist/engine.js";
-import { anchorData } from "../dist/anchor-data.js";
+import { anchorData } from "./fixtures/anchor-data.js";
 import { reviewAccrual } from "../dist/review.js";
 
 test("selected periods use month end and the first day of the next month", () => {
