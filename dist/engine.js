@@ -116,10 +116,10 @@ export function toJournalCsv(lines, side) {
     }
     headers.set(line.external_id, header);
   }
-  const columns = ["external_id", "line_id", "accrual_id", "line_type", "posting_date", "reversal_date", "account", "debit_usd", "credit_usd", "currency", "transaction_currency", "transaction_amount", "fx_to_usd", "memo", "source_ref", "review_status", "handler", "reviewed_by", "review_note", "reviewed_on", "reviewed_time_utc"];
+  const columns = ["external_id", "line_id", "accrual_id", "line_type", "posting_date", "reversal_date", "account", "debit_usd", "credit_usd", "currency", "transaction_currency", "transaction_amount", "fx_to_usd", "memo", "source_ref", "review_status", "handler", "reviewed_by", "review_note", "reviewed_on", "reviewed_time_utc", "posting_checked_by", "posting_check_evidence", "posting_checked_on", "posting_checked_time_utc", "ap_gl_not_recorded_confirmed"];
   const quote = (value) => {
     const text = typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value ?? "");
     return `"${text.replaceAll('"', '""')}"`;
   };
-  return [columns.join(","), ...selected.map(line => columns.map(column => quote(["posting_date", "reversal_date", "reviewed_on"].includes(column) && line[column] ? formatOutputDate(line[column]) : line[column])).join(","))].join("\n");
+  return [columns.join(","), ...selected.map(line => columns.map(column => quote(["posting_date", "reversal_date", "reviewed_on", "posting_checked_on"].includes(column) && line[column] ? formatOutputDate(line[column]) : line[column])).join(","))].join("\n");
 }

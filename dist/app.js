@@ -1,6 +1,7 @@
-import { AccrualEngine, toJournalCsv, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
+import { AccrualEngine, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
 import { filterAccruals, reviewAccrual } from "./review.js";
 import { MONTHS, periodDates, periodLabel } from "./period.js";
+import { consumePostingControlledCsv, getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck } from "./posting-controls.js";
 
 const engine = new AccrualEngine();
 let result;
@@ -56,6 +57,7 @@ function renderEmpty() {
   for (const side of ["ar", "ap"]) {
     $(`#export-${side}-csv`).disabled = true;
     $(`#export-${side}-reason`).textContent = "Import a workbook before downloading.";
+    $(`#check-${side}-export`).disabled = true;
   }
   for (const key of Object.keys(filters)) $(`#filter-${key}`).disabled = true;
   $("#clear-filters").disabled = true;
@@ -98,15 +100,18 @@ function render() {
   $("#nav-review").textContent = result.totals.review;
   $("#ar-caption").textContent = `${result.accruals.filter(item => item.side === "AR").length} AR accrual(s)`;
   $("#ap-caption").textContent = `${result.accruals.filter(item => item.side === "AP").length} AP accrual(s)`;
-  $("#ready-caption").textContent = "No open review, or manually reviewed";
+  $("#ready-caption").textContent = "Calculation-ready; posting check is separate";
   $("#review-caption").textContent = "Items requiring verification";
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   const visible = filterAccruals(result.accruals, filters);
   $("#accrual-count").textContent = `${visible.length} of ${result.accruals.length} accruals`;
   for (const side of ["AR", "AP"]) {
-    const state = getExportAvailability(result.journalLines, side);
+    const calculated = getExportAvailability(result.journalLines, side);
+    const state = getPostingAvailability(result, side);
     const key = side.toLowerCase();
+    $(`#check-${key}-export`).disabled = !calculated.allowed;
+    $(`#check-${key}-export`).title = calculated.allowed ? `Check ${side} journal before export` : calculated.reason;
     $(`#export-${key}-csv`).disabled = !state.allowed;
     $(`#export-${key}-csv`).title = state.reason;
     $(`#export-${key}-reason`).textContent = state.reason;
@@ -174,7 +179,7 @@ function openDetail(id) {
       <div><dt>Reversal date</dt><dd>${formatOutputDate(result.reversalDate)}</dd></div>
     </dl>
     ${item.anomaly ? `<div class="callout"><strong>Review reason</strong><p>${escapeHtml(item.anomaly.event_id)} is ${number.format(item.anomaly.quantity / item.anomaly.baseline)}× its historical baseline. The engine preserves actual quantity and routes the accrual for review.</p></div>` : ""}
-    ${item.matching ? `<section><h3>Receipt-to-invoice calculation</h3><p>Receipt value ${money.format(item.matching.receiptValueUsd)} − matched invoices through ${formatOutputDate(result.closeDate)} ${money.format(item.matching.matchedInvoiceUsd)} = ${money.format(item.amountUsd)}${item.reviewBlocked ? " (provisional; negative residuals are shown as zero)" : " uninvoiced"}.</p><p>Invoice-date cutoff only. Existing GL postings have not been checked.</p>${item.reviewBlocked ? `<div class="callout"><strong>Matching issues — source correction required</strong><ul>${item.reviewReasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}</ul></div>` : ""}</section>` : ""}
+    ${item.matching ? `<section><h3>Receipt-to-invoice calculation</h3><p>Receipt value ${money.format(item.matching.receiptValueUsd)} − matched invoices through ${formatOutputDate(result.closeDate)} ${money.format(item.matching.matchedInvoiceUsd)} = ${money.format(item.amountUsd)}${item.reviewBlocked ? " (provisional; negative residuals are shown as zero)" : " uninvoiced"}.</p><p>Invoice-date cutoff only. This is a proposed uninvoiced balance, not an additional journal approved for posting. Before AP export, reconcile the receipt and accrued-liability GL balance in NetSuite. If any proposed amount is already recorded, stop; this app cannot calculate the incremental adjustment.</p>${item.reviewBlocked ? `<div class="callout"><strong>Matching issues — source correction required</strong><ul>${item.reviewReasons.map(reason => `<li>${escapeHtml(reason)}</li>`).join("")}</ul></div>` : ""}</section>` : ""}
     ${reviewSection(item)}
     <h3>Journal preview</h3>
     <div class="mini-table">${item.lines.map((line) => `<div><span>${escapeHtml(line.line_type)} · ${line.account}</span><span>${line.debit_usd ? `Dr ${money.format(line.debit_usd)}` : `Cr ${money.format(line.credit_usd)}`}</span><small class="audit-line">Line ID: ${escapeHtml(line.line_id)}</small></div>`).join("")}</div>
@@ -190,6 +195,7 @@ function openDetail(id) {
     event.preventDefault();
     try {
       reviewAccrual(result, id, { reviewer: $("#reviewer-name").value, note: $("#review-note").value, confirmed: $("#review-confirm").checked, action: item.status === "REVIEW" ? "approve" : "reopen" });
+      revokePostingCheck(result, item.side);
       $("#run-state").textContent = item.status === "READY" ? "Review recorded — no entries posted" : "Review reopened — side download locked";
       openDetail(id);
     } catch (error) {
@@ -217,7 +223,7 @@ function closeDetail() {
 
 function downloadCsv(side) {
   let csv;
-  try { csv = toJournalCsv(result.journalLines, side); } catch (error) {
+  try { csv = consumePostingControlledCsv(result, side); } catch (error) {
     $("#import-error").textContent = error.message;
     $("#import-error").hidden = false;
     return;
@@ -229,6 +235,7 @@ function downloadCsv(side) {
   link.download = `helix-${side.toLowerCase()}-journal-${result.closeDate}.csv`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+  render();
 }
 
 async function importWorkbook(file) {
@@ -311,6 +318,50 @@ document.addEventListener("click", event => {
 
 $("#export-ar-csv").addEventListener("click", () => downloadCsv("AR"));
 $("#export-ap-csv").addEventListener("click", () => downloadCsv("AP"));
+let postingCheckSide = null;
+let postingCheckOpener = null;
+function openPostingCheck(side, opener) {
+  if (!result || !getExportAvailability(result.journalLines, side).allowed) return;
+  postingCheckSide = side;
+  postingCheckOpener = opener;
+  $("#posting-check-form").reset();
+  $("#posting-check-error").hidden = true;
+  $("#posting-check-title").textContent = `${side} pre-export check`;
+  $("#posting-check-journal").textContent = `Monthly external ID: ${journalIdForSide(result, side)}`;
+  $("#posting-check-ap").hidden = side !== "AP";
+  $("#revoke-posting-check").hidden = !result.postingChecks?.[side];
+  $("#posting-check-existing").textContent = result.postingChecks?.[side]
+    ? `Current check recorded by ${result.postingChecks[side].reviewer}. Recording a new check replaces it.`
+    : "No check recorded for this calculation.";
+  $("#posting-check").showModal();
+  $("#posting-check-title").focus();
+}
+for (const side of ["AR", "AP"]) {
+  $(`#check-${side.toLowerCase()}-export`).addEventListener("click", event => openPostingCheck(side, event.currentTarget));
+}
+$("#posting-check-form").addEventListener("submit", event => {
+  event.preventDefault();
+  try {
+    recordPostingCheck(result, postingCheckSide, {
+      reviewer: $("#posting-check-name").value,
+      evidence: $("#posting-check-evidence").value,
+      externalIdAbsent: $("#posting-check-external").checked,
+      apGlNotRecorded: $("#posting-check-gl").checked,
+    });
+    $("#posting-check").close();
+    render();
+  } catch (error) {
+    $("#posting-check-error").textContent = error.message;
+    $("#posting-check-error").hidden = false;
+  }
+});
+$("#revoke-posting-check").addEventListener("click", () => {
+  revokePostingCheck(result, postingCheckSide);
+  $("#posting-check").close();
+  render();
+});
+$("#close-posting-check").addEventListener("click", () => $("#posting-check").close());
+$("#posting-check").addEventListener("close", () => postingCheckOpener?.focus());
 for (const key of Object.keys(filters)) {
   $(`#filter-${key}`).addEventListener(key === "counterparty" ? "input" : "change", event => { filters[key] = event.target.value; render(); });
 }
