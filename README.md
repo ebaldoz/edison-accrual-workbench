@@ -31,7 +31,7 @@ npm test
 npm run serve
 ```
 
-Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Resolve any Review items. AR can then be downloaded; for AP, use **Check AP receipt / GL** and record the reconciliation before downloading. Import the CSV in NetSuite using **Add**, with `external_id` mapped to Journal Entry External ID. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook, results, and AP check. The workbook is not saved to a database or browser storage.
+Open `http://localhost:4173`, choose the period to the left of Import workbook, and import the supplied workbook. A valid import calculates the accruals immediately. Resolve any Review items. AR can then be downloaded; for AP, use **Check AP receipt / GL** and record the reconciliation before downloading. After a check is recorded, the button reads **View AP check**. Its dialog shows the checker, time, and evidence; **Recheck** explicitly replaces the check, while **Revoke check** locks AP download again. Repeat downloads do not require rechecking. Import the CSV in NetSuite using **Add**, with `external_id` mapped to Journal Entry External ID. Changing to another period clears the workbook and results; import a workbook for the new period to calculate it. To recalculate corrected source data, import the corrected workbook. A refresh also clears the in-browser workbook, results, and AP check. The workbook is not saved to a database or browser storage.
 
 ## Import workbook requirements
 
