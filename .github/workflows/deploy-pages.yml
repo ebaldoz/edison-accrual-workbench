@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir -p public
           cp -R dist/. public/
-          rm public/anchor-data.js
+          
           test -f public/index.html
           test ! -e public/anchor-data.js
       - name: Upload static site
