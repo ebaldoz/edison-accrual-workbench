@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Controller-ready accrual workbench for unbilled usage and uninvoiced receipts." />
   <title>Helix Accrual Workbench</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20261008-paging2" />
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
-  <script type="module" src="./app.js"></script>
+  <script type="module" src="./app.js?v=20261008-paging2"></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to main content</a>
@@ -82,6 +82,7 @@
       <nav id="accrual-pagination" class="accrual-pagination" aria-label="Accrual pages" hidden>
         <button id="accrual-prev" type="button" aria-controls="accrual-body">← Previous</button>
         <span id="accrual-page-status" role="status" aria-live="polite"></span>
+        <label class="page-jump" for="accrual-page-select">Go to page <select id="accrual-page-select" aria-controls="accrual-body"></select></label>
         <button id="accrual-next" type="button" aria-controls="accrual-body">Next →</button>
       </nav>
       <section class="posting-checks" aria-labelledby="posting-checks-title">
