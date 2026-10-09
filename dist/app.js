@@ -283,7 +283,7 @@ function downloadCsv(side) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `helix-${side.toLowerCase()}-journal-${result.closeDate}.csv`;
+  link.download = `edison-${side.toLowerCase()}-journal-${result.closeDate}.csv`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   render();
@@ -514,7 +514,7 @@ $("#file-input").addEventListener("change", async (event) => {
 // A display preference only; this is not an accounting or posting ledger.
 let sidebarCollapsed = window.matchMedia("(max-width: 900px)").matches;
 try {
-  const preference = localStorage.getItem("helix.sidebar.collapsed");
+  const preference = localStorage.getItem("edison.sidebar.collapsed") ?? localStorage.getItem("helix.sidebar.collapsed");
   if (preference !== null) sidebarCollapsed = preference === "true";
 } catch { /* The navigation remains usable when storage is unavailable. */ }
 function setSidebar(collapsed) {
@@ -525,7 +525,7 @@ function setSidebar(collapsed) {
   $("#sidebar-toggle").setAttribute("aria-label", label);
   $("#sidebar-toggle").title = label;
   $("#toggle-icon").textContent = collapsed ? "»" : "«";
-  try { localStorage.setItem("helix.sidebar.collapsed", String(collapsed)); } catch { /* Optional preference. */ }
+  try { localStorage.setItem("edison.sidebar.collapsed", String(collapsed)); } catch { /* Optional preference. */ }
 }
 $("#sidebar-toggle").addEventListener("click", () => setSidebar(!sidebarCollapsed));
 function updateNavigation() {

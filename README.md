@@ -1,10 +1,10 @@
-# Helix Accrual Workbench
+# Edison Accrual Workbench
 
 A take-home demo that calculates unbilled customer revenue (AR) and uninvoiced goods receipts (AP), then exports journal-entry CSV files for NetSuite. It does not post entries to NetSuite.
 
 ## Open the app
 
-[Open Helix Accrual Workbench on GitHub Pages](https://ebaldoz.github.io/helix-accrual-workbench/).
+[Open Edison Accrual Workbench on GitHub Pages](https://ebaldoz.github.io/edison-accrual-workbench/).
 
 No installation or local server is needed.
 
