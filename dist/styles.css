@@ -172,6 +172,15 @@ body.sidebar-collapsed { --sidebar:76px; }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none!important; } }
 
 /* Readability: rem sizes respect browser font preferences; no fixed text heights. */
+.accrual-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; padding:16px 22px; border-top:1px solid var(--line); }
+.accrual-pagination[hidden] { display:none; }
+.accrual-pagination button { min-height:44px; padding:8px 14px; border:1px solid var(--line); background:var(--ink); color:#101010; font:1rem/1.5 Helvetica,Arial,sans-serif; cursor:pointer; }
+.accrual-pagination span { font:1rem/1.5 var(--mono); }
+.source-records details,.source-payload { margin:12px 0; border:1px solid var(--line); padding:12px; }
+.source-records summary,.source-payload summary { min-height:44px; cursor:pointer; font:1rem/1.5 Helvetica,Arial,sans-serif; overflow-wrap:anywhere; }
+.source-records summary:hover,.source-payload summary:hover { color:var(--link-hover-purple); }
+.source-records dl div { grid-template-columns:minmax(0,1fr) minmax(0,1.5fr); }
+.source-records dd,.source-records dt { overflow-wrap:anywhere; min-width:0; }
 html { font-size:100%; }
 body { font-size:1rem; line-height:1.5; }
 :root { --sidebar:280px; }

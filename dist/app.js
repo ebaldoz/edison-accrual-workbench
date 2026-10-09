@@ -1,10 +1,13 @@
 import { AccrualEngine, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
 import { filterAccruals, reviewAccrual } from "./review.js";
 import { MONTHS, periodDates, periodLabel } from "./period.js";
+import { paginateAccruals, sourceRecordsFor } from "./accrual-view.js";
 import { getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "./posting-controls.js";
 
 const engine = new AccrualEngine();
 let result;
+let importedSheets;
+let accrualPage = 1;
 let selectedPeriod = { year: 2026, month: 3 };
 let selectedId = null;
 const filters = { side: "", counterparty: "", status: "", handler: "" };
@@ -22,6 +25,7 @@ function escapeHtml(value) {
 }
 
 function showImportedResult(filename) {
+  accrualPage = 1;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
   $("#overlay").classList.remove("show");
@@ -53,6 +57,7 @@ function renderEmpty() {
   $("#balance-state").className = "control pending";
   $("#accrual-count").textContent = "No workbook loaded";
   $("#accrual-body").innerHTML = '<tr><td colspan="6" class="empty">Import an XLSX workbook to see accruals.</td></tr>';
+  $("#accrual-pagination").hidden = true;
   $("#review-list").innerHTML = '<div class="empty">Import an XLSX workbook to see review items.</div>';
   for (const side of ["ar", "ap"]) {
     $(`#export-${side}-csv`).disabled = true;
@@ -67,6 +72,8 @@ function renderEmpty() {
 
 function clearImportedResult() {
   result = undefined;
+  importedSheets = undefined;
+  accrualPage = 1;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
   $("#overlay").classList.remove("show");
@@ -107,6 +114,12 @@ function render() {
   $("#balance-state").textContent = result.control.balanced ? "Balanced" : "Out of balance";
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   const visible = filterAccruals(result.accruals, filters);
+  const page = paginateAccruals(visible, accrualPage);
+  accrualPage = page.page;
+  $("#accrual-pagination").hidden = !visible.length;
+  $("#accrual-page-status").textContent = `Showing ${page.start}–${page.end} of ${page.total} · Page ${page.page} of ${page.pages}`;
+  $("#accrual-prev").disabled = page.page === 1;
+  $("#accrual-next").disabled = page.page === page.pages;
   $("#accrual-count").textContent = `${visible.length} of ${result.accruals.length} accruals`;
   for (const side of ["AR", "AP"]) {
     const calculated = getExportAvailability(result.journalLines, side);
@@ -125,7 +138,7 @@ function render() {
     if (calculated.allowed) id.textContent = `Monthly external ID: ${journalIdForSide(result, side)}`;
   }
 
-  $("#accrual-body").innerHTML = visible.length ? visible.map((item) => `
+  $("#accrual-body").innerHTML = visible.length ? page.items.map((item) => `
     <tr data-id="${escapeHtml(item.id)}" class="${selectedId === item.id ? "selected" : ""}">
       <td><span class="side ${item.side.toLowerCase()}">${item.side}</span></td>
       <td><strong>${escapeHtml(item.counterparty)}</strong><small>${escapeHtml(item.description)}</small></td>
@@ -191,8 +204,9 @@ function openDetail(id) {
     ${reviewSection(item)}
     <h3>Journal preview</h3>
     <div class="mini-table">${item.lines.map((line) => `<div><span>${escapeHtml(line.line_type)} · ${line.account}</span><span>${line.debit_usd ? `Dr ${money.format(line.debit_usd)}` : `Cr ${money.format(line.credit_usd)}`}</span><small class="audit-line">Line ID: ${escapeHtml(line.line_id)}</small></div>`).join("")}</div>
-    <h3>Source payload</h3>
-    <pre>${escapeHtml(JSON.stringify(item.sourceDetail, null, 2))}</pre>`;
+    ${renderSourceRecords(item)}
+    <details class="source-payload"><summary>Source Payload</summary>
+    <pre>${escapeHtml(JSON.stringify(item.sourceDetail, null, 2))}</pre></details>`;
   $("#detail-panel").classList.add("open");
   $("#overlay").classList.add("show");
   $("#detail-panel").inert = false;
@@ -213,6 +227,11 @@ function openDetail(id) {
   });
   render();
   $("#close-detail").focus();
+}
+
+function renderSourceRecords(item) {
+  const groups = sourceRecordsFor(item, importedSheets);
+  return `<section class="source-records"><h3>Source data</h3><p>Imported workbook records used by this accrual. Expand a group, then a record to inspect every original field. These are workbook snapshots, not live NetSuite records.</p>${groups.length ? groups.map(group => `<details><summary>${escapeHtml(group.label)} (${group.rows.length}) · ${escapeHtml(group.sheet)}</summary>${group.rows.length ? group.rows.map((row, index) => `<details class="source-record"><summary>${escapeHtml(row.event_id || row.receipt_id || row.invoice_number || row.po_number || row.customer_id || row.vendor_id || row.sku || `Record ${index + 1}`)} · Record ${index + 1}</summary><dl>${Object.entries(row).map(([key, value]) => `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(value instanceof Date ? value.toISOString() : typeof value === "object" ? JSON.stringify(value) : value)}</dd></div>`).join("")}</dl></details>`).join("") : `<p>No records in this group.</p>`}</details>`).join("") : `<p>This handler does not supply structured source records. See Source Payload below.</p>`}</section>`;
 }
 
 function closeDetail() {
@@ -256,6 +275,7 @@ async function importWorkbook(file) {
   validateDataset(sheets);
   const nextResult = engine.run(sheets, periodDates(selectedPeriod.year, selectedPeriod.month));
   result = nextResult;
+  importedSheets = sheets;
   showImportedResult(file.name);
 }
 
@@ -380,12 +400,21 @@ $("#revoke-posting-check").addEventListener("click", () => {
 $("#close-posting-check").addEventListener("click", () => $("#posting-check").close());
 $("#posting-check").addEventListener("close", () => postingCheckOpener?.focus());
 for (const key of Object.keys(filters)) {
-  $(`#filter-${key}`).addEventListener(key === "counterparty" ? "input" : "change", event => { filters[key] = event.target.value; render(); });
+  $(`#filter-${key}`).addEventListener(key === "counterparty" ? "input" : "change", event => { filters[key] = event.target.value; accrualPage = 1; render(); });
 }
 $("#clear-filters").addEventListener("click", () => {
+  accrualPage = 1;
   for (const key of Object.keys(filters)) { filters[key] = ""; $(`#filter-${key}`).value = ""; }
   render();
 });
+for (const [id, change] of [["accrual-prev", -1], ["accrual-next", 1]]) {
+  $(`#${id}`).addEventListener("click", () => {
+    accrualPage += change;
+    render();
+    // If the last Next button became disabled, retain keyboard focus on Previous.
+    ($(`#${id}`).disabled ? $(change > 0 ? "#accrual-prev" : "#accrual-next") : $(`#${id}`)).focus();
+  });
+}
 $("#close-detail").addEventListener("click", closeDetail);
 $("#overlay").addEventListener("click", closeDetail);
 // A native modal keeps focus inside the help and makes the background inert.
@@ -468,7 +497,7 @@ document.querySelectorAll("#sidebar-nav a").forEach(link => link.addEventListene
 window.addEventListener("hashchange", updateNavigation);
 document.addEventListener("keydown", event => {
   if (event.key === "Tab" && selectedId) {
-    const controls = [...$("#detail-panel").querySelectorAll('button, input, textarea, select, summary, [tabindex="0"]')].filter(element => !element.disabled && !element.hidden);
+    const controls = [...$("#detail-panel").querySelectorAll('button, input, textarea, select, summary, [tabindex="0"]')].filter(element => !element.disabled && !element.hidden && element.getClientRects().length);
     const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }

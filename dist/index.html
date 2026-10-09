@@ -79,6 +79,11 @@
           <tbody id="accrual-body"><tr><td colspan="6" class="empty">Import an XLSX workbook to see accruals.</td></tr></tbody>
         </table>
       </div>
+      <nav id="accrual-pagination" class="accrual-pagination" aria-label="Accrual pages" hidden>
+        <button id="accrual-prev" type="button" aria-controls="accrual-body">← Previous</button>
+        <span id="accrual-page-status" role="status" aria-live="polite"></span>
+        <button id="accrual-next" type="button" aria-controls="accrual-body">Next →</button>
+      </nav>
       <section class="posting-checks" aria-labelledby="posting-checks-title">
         <div><p class="eyebrow">AP LEDGER CONTROL</p><h3 id="posting-checks-title">Reconcile AP before download</h3><p>Check each proposed uninvoiced receipt against goods-receipt and accrued-liability GL postings. Do not export an amount already recorded. AR needs no separate export check.</p></div>
         <div class="posting-check-actions"><button id="check-ap-export" type="button" disabled>Check AP receipt / GL</button></div>
