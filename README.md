@@ -112,7 +112,7 @@ GitHub runs the tests before deploying the site from `main`. Open the repository
 
 ## Publishing
 
-[The GitHub Pages workflow](.github/workflows/deploy-pages.yml) tests the code and publishes the files in `dist/` when changes reach `main`. Test fixtures are not part of the published site. GitHub Pages is public even though the repository is private.
+[The GitHub Pages workflow](.github/workflows/deploy-pages.yml) tests the code and publishes the files in `dist/` when changes reach `main`. Test fixtures are not part of the published site.
 
 ## With more time
 
