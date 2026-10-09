@@ -1,7 +1,7 @@
-import { AccrualEngine, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js";
+import { AccrualEngine, validateDataset, formatOutputDate, getExportAvailability } from "./engine.js?v=20261008-ar-cutoff";
 import { filterAccruals, reviewAccrual } from "./review.js";
 import { MONTHS, periodDates, periodLabel } from "./period.js";
-import { paginateAccruals, sourceRecordsFor } from "./accrual-view.js";
+import { paginateAccruals, sourceRecordsFor } from "./accrual-view.js?v=20261008-ar-cutoff";
 import { getPostingAvailability, journalIdForSide, recordPostingCheck, revokePostingCheck, toPostingControlledCsv } from "./posting-controls.js";
 
 const engine = new AccrualEngine();

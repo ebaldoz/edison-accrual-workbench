@@ -1,10 +1,10 @@
 import { compact, formatOutputDate } from "./handler-kit.js";
 import { HandlerRegistry } from "./handler-registry.js";
-import { defaultHandlers } from "./handlers/index.js";
+import { defaultHandlers } from "./handlers/index.js?v=20261008-ar-cutoff";
 
 export { formatOutputDate } from "./handler-kit.js";
 export { HandlerRegistry } from "./handler-registry.js";
-export { UsageAccrualHandler } from "./handlers/usage.js";
+export { UsageAccrualHandler } from "./handlers/usage.js?v=20261008-ar-cutoff";
 export { ReceiptAccrualHandler } from "./handlers/receipt.js";
 
 export function validateDataset(sheets, handlers = defaultHandlers) {

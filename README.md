@@ -28,7 +28,7 @@ Use one `.xlsx` or `.xls` file. Its filename does not matter. The default handle
 | `customers` | `customer_id`, `name`, `currency` |
 | `sku_price_book` | `sku`, `unit`, `list_unit_price_usd` |
 | `usage_events` | `event_id`, `customer_id`, `sku`, `quantity`, `occurred_on` |
-| `chargebee_invoices` | `customer_id`, `period_end`, `fx_to_usd` |
+| `chargebee_invoices` | `customer_id`, `period_end`, `issued_at`, `fx_to_usd` |
 | `vendors` | `vendor_id`, `name` |
 | `purchase_orders` | `po_number`, `vendor_id`, `gl_account` |
 | `po_lines` | `po_number`, `po_line_ref` |
@@ -38,6 +38,15 @@ Use one `.xlsx` or `.xls` file. Its filename does not matter. The default handle
 The `vendor_invoices` tab is required even if it has no data rows. This table lists the main fields, not every validation rule. Invalid or unclear data may stop the import or create a Review item.
 
 For AP dates, use Excel dates or `YYYY-MM-DD` text. The month selected in the app controls the close date—not the filename. A new handler may require additional tabs.
+
+For AR, every usage row needs a unique, nonempty `event_id`. Duplicate IDs stop the import rather than silently counting the event twice. Billing invoices need valid `period_end` and `issued_at` values. Use Excel dates or `YYYY-MM-DD`; timestamps must include a timezone, such as `2026-03-29T00:00:00Z`. The handler uses only invoices issued by the selected close whose billing period also ends by close. A customer with usage through close but no eligible billing history stops the calculation; the app does not guess their billing cutoff.
+
+## Accounting assumptions
+
+- **Churn:** customer status alone does not remove earned revenue. The app trusts the usage feed to contain valid billable events, including usage earned before cancellation. It does not check a cancellation date or flag post-cancellation usage. Review that source data before importing; a churned customer is not automatically a zero-dollar accrual.
+- **AR cutoff:** accrue usage after the latest eligible invoice's period end through the selected month-end. Invoice timestamps are compared using UTC dates, including the whole close day.
+- **Amounts:** AR uses actual usage × the USD price book. AP uses the uninvoiced receipt balance from the supplied USD values. AP needs a separate ledger reconciliation before export.
+- **Reversals:** the current export uses the next month's first calendar day and a repeated `reversal_date`, not separate reversal rows. This differs from a first-business-day calendar; NetSuite must process the reversal.
 
 ## How the code is organized
 
@@ -53,6 +62,17 @@ For AP dates, use Excel dates or `YYYY-MM-DD` text. The month selected in the ap
 | [`dist/accrual-view.js`](dist/accrual-view.js) | Pagination and source drill-through |
 | [`dist/posting-controls.js`](dist/posting-controls.js) | AP reconciliation check before export |
 | [`tests/`](tests/) | Automated tests and sample test data |
+
+### Data model and design choices
+
+The data flows through four steps: **workbook records → handler calculations → accruals and journal lines → review and CSV export**.
+
+- **Source records** keep the original customer, usage, invoice, PO, receipt, and vendor fields from the workbook.
+- **An accrual** holds its amount, AR/AP side, handler, source references, and Ready/Review status. AR groups by customer and SKU; AP works at receipt-line level.
+- **Journal lines** keep each accrual's debit/credit pair and share one monthly AR or AP journal ID. Source references connect the output back to the imported records.
+- **Review decisions** and the AP ledger check belong to the current calculation. They are kept in memory and reset on refresh or reimport. A future database would separate all results and decisions by accounting month.
+
+The app uses plain HTML, CSS, and JavaScript modules to keep this small demo easy to inspect, without a server or build step. SheetJS reads Excel files in the browser so the workbook does not need to be uploaded. Registered handlers keep accounting rules separate from the screen and engine. The built-in Node test runner checks the rules without extra test packages. GitHub Pages provides a simple live demo; the trade-off is no saved state, verified identity, or live ledger access.
 
 ### Add or edit a handler
 
@@ -82,15 +102,24 @@ Handlers currently support AR and AP only. Supply any additional tabs a new hand
 
 There is no AI model in the app. A simple rule flags usage at or above twice the historical average for the same customer and SKU. The actual usage amount stays unchanged; a person reviews the flag. This makes the calculation easy to explain and test.
 
+The 2× threshold is a demo choice, not a threshold supplied by Helix or an accounting standard. It catches the seeded spike and lets a reviewer see the exact event and comparison. The small dataset does not support training or tuning a reliable model. The rule compares individual events, so event size and a short history can cause false alarms; without history it does not flag a spike, and a zero baseline flags any nonnegative event. With more history, I would compare consistent daily totals and measure missed spikes and false alarms before choosing a better threshold. No LLM calculates journal amounts.
+
 ## Automated tests
 
-The repository currently has **68 automated tests**. They check amounts, currency conversion, usage flags, receipt/invoice matching, date cutoffs, duplicate data, balanced entries, source references, plugin rules, review controls, pagination, and CSV output.
+The repository currently has **77 automated tests**. They check amounts, currency conversion, usage flags, receipt/invoice matching, date cutoffs, duplicate data, balanced entries, source references, plugin rules, review controls, pagination, and CSV output. AR regression tests also cover duplicate event IDs, future and late-issued invoices, UTC cutoffs, the exact invoice shown in source drill-through, and preserving earned usage for churned customers.
 
 GitHub runs the tests before deploying the site from `main`. Open the repository's **Actions** tab and select the latest deployment: a green check means the workflow passed. The tests do not test a real NetSuite import.
 
 ## Publishing
 
 [The GitHub Pages workflow](.github/workflows/deploy-pages.yml) tests the code and publishes the files in `dist/` when changes reach `main`. Test fixtures are not part of the published site. GitHub Pages is public even though the repository is private.
+
+## With more time
+
+- Save source snapshots, calculations, review history, and posting results by accounting month in a database.
+- Add verified reviewers and source-level duplicate controls, and read posting status and receipt/GL balances from NetSuite.
+- Add stronger source validation, cancellation-date checks, receipt quantity/price checks, and a business-day reversal calendar.
+- Improve anomaly detection using more history and measured results; keep accounting amounts deterministic.
 
 ## Known limitations
 
