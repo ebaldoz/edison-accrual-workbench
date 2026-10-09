@@ -18,8 +18,8 @@ export function sourceRecordsFor(item, sheets) {
   if (item.handler === "AR_USAGE") {
     const { customer_id, sku, events } = item.sourceDetail;
     const ids = new Set(events);
-    const invoices = sheets.chargebee_invoices.filter(row => row.customer_id === customer_id);
-    const latest = [...invoices].sort((a, b) => isoDate(b.period_end).localeCompare(isoDate(a.period_end)))[0];
+    // Display the actual invoice selected at close, not a later workbook invoice.
+    const latest = item.sourceDetail.billingInvoice;
     return [
       group("usage_events", "Accrued usage events", sheets.usage_events.filter(row => ids.has(row.event_id))),
       group("usage_events", "Historical events used for anomaly baseline", sheets.usage_events.filter(row => row.customer_id === customer_id && row.sku === sku && latest && isoDate(row.occurred_on) <= isoDate(latest.period_end))),
