@@ -1,4 +1,4 @@
-name: Deploy Helix Workbench to GitHub Pages
+name: Deploy Edison Workbench to GitHub Pages
 
 on:
   push:
