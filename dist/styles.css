@@ -176,6 +176,10 @@ body.sidebar-collapsed { --sidebar:76px; }
 .accrual-pagination[hidden] { display:none; }
 .accrual-pagination button { min-height:44px; padding:8px 14px; border:1px solid var(--line); background:var(--ink); color:#101010; font:1rem/1.5 Helvetica,Arial,sans-serif; cursor:pointer; }
 .accrual-pagination span { font:1rem/1.5 var(--mono); }
+.accrual-pagination .page-jump { display:flex; flex-wrap:wrap; align-items:center; gap:10px; font:1rem/1.5 Helvetica,Arial,sans-serif; }
+.accrual-pagination select { min-height:44px; padding:8px 12px; border:1px solid #94948a; background:#191916; color:var(--ink); font:1rem/1.5 Helvetica,Arial,sans-serif; }
+.accrual-pagination button:not(:disabled):hover { border-color:#9476ff; color:#6038ef; }
+.accrual-pagination button:disabled { background:#343432; color:#b7b7ae; border-color:#62625b; cursor:not-allowed; }
 .source-records details,.source-payload { margin:12px 0; border:1px solid var(--line); padding:12px; }
 .source-records summary,.source-payload summary { min-height:44px; cursor:pointer; font:1rem/1.5 Helvetica,Arial,sans-serif; overflow-wrap:anywhere; }
 .source-records summary:hover,.source-payload summary:hover { color:var(--link-hover-purple); }
