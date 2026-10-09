@@ -121,7 +121,7 @@ function render() {
   $("#accrual-prev").disabled = page.page === 1;
   $("#accrual-next").disabled = page.page === page.pages;
   const pageSelect = $("#accrual-page-select");
-  pageSelect.innerHTML = Array.from({ length: page.pages }, (_, index) => `<option value="${index + 1}">Page ${index + 1} of ${page.pages}</option>`).join("");
+  pageSelect.innerHTML = Array.from({ length: page.pages }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("");
   pageSelect.value = String(page.page);
   $("#accrual-count").textContent = visible.length ? `Showing ${page.start}–${page.end} of ${visible.length}${visible.length !== result.accruals.length ? ` filtered (${result.accruals.length} total)` : " accruals"}` : `0 matching accruals (${result.accruals.length} total)`;
   for (const side of ["AR", "AP"]) {
