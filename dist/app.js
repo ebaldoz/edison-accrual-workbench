@@ -26,6 +26,7 @@ function escapeHtml(value) {
 
 function showImportedResult(filename) {
   accrualPage = 1;
+  $("#accrual-table-scroll").scrollTop = 0;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
   $("#overlay").classList.remove("show");
@@ -74,6 +75,7 @@ function clearImportedResult() {
   result = undefined;
   importedSheets = undefined;
   accrualPage = 1;
+  $("#accrual-table-scroll").scrollTop = 0;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
   $("#overlay").classList.remove("show");
@@ -403,17 +405,19 @@ $("#revoke-posting-check").addEventListener("click", () => {
 $("#close-posting-check").addEventListener("click", () => $("#posting-check").close());
 $("#posting-check").addEventListener("close", () => postingCheckOpener?.focus());
 for (const key of Object.keys(filters)) {
-  $(`#filter-${key}`).addEventListener(key === "counterparty" ? "input" : "change", event => { filters[key] = event.target.value; accrualPage = 1; render(); });
+  $(`#filter-${key}`).addEventListener(key === "counterparty" ? "input" : "change", event => { filters[key] = event.target.value; accrualPage = 1; render(); $("#accrual-table-scroll").scrollTop = 0; });
 }
 $("#clear-filters").addEventListener("click", () => {
   accrualPage = 1;
   for (const key of Object.keys(filters)) { filters[key] = ""; $(`#filter-${key}`).value = ""; }
   render();
+  $("#accrual-table-scroll").scrollTop = 0;
 });
 for (const [id, change] of [["accrual-prev", -1], ["accrual-next", 1]]) {
   $(`#${id}`).addEventListener("click", () => {
     accrualPage += change;
     render();
+    $("#accrual-table-scroll").scrollTop = 0;
     // If the last Next button became disabled, retain keyboard focus on Previous.
     ($(`#${id}`).disabled ? $(change > 0 ? "#accrual-prev" : "#accrual-next") : $(`#${id}`)).focus();
   });
@@ -421,6 +425,7 @@ for (const [id, change] of [["accrual-prev", -1], ["accrual-next", 1]]) {
 $("#accrual-page-select").addEventListener("change", event => {
   accrualPage = Number(event.target.value);
   render();
+  $("#accrual-table-scroll").scrollTop = 0;
   $("#accrual-page-select").focus();
 });
 $("#close-detail").addEventListener("click", closeDetail);

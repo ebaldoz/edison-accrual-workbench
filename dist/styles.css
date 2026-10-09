@@ -423,6 +423,16 @@ nav a.active b { background:#6038ef; color:#fff; }
 
 /* Compact workspace: reduce whitespace without reducing readable type or
    keyboard/touch targets. Source fields remain complete and wrap as needed. */
+#accrual-table-scroll {
+  height:clamp(20rem,48vh,32rem);
+  height:clamp(20rem,48svh,32rem);
+  overflow:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  position:relative;
+  scroll-padding-top:4rem;
+}
+#accrual-table-scroll thead th { position:sticky; top:0; z-index:2; background:#101010; box-shadow:0 1px 0 var(--line); }
 .accrual-pagination { padding:10px 16px; gap:10px 16px; justify-content:flex-end; }
 .accrual-pagination > span { margin-right:auto; }
 .accrual-pagination .page-buttons { display:flex; flex-wrap:nowrap; gap:8px; }
