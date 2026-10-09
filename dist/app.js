@@ -8,6 +8,7 @@ const engine = new AccrualEngine();
 let result;
 let importedSheets;
 let accrualPage = 1;
+let reviewPage = 1;
 let selectedPeriod = { year: 2026, month: 3 };
 let selectedId = null;
 const filters = { side: "", counterparty: "", status: "", handler: "" };
@@ -26,6 +27,8 @@ function escapeHtml(value) {
 
 function showImportedResult(filename) {
   accrualPage = 1;
+  reviewPage = 1;
+  $("#review-scroll").scrollTop = 0;
   $("#accrual-table-scroll").scrollTop = 0;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
@@ -59,6 +62,9 @@ function renderEmpty() {
   $("#accrual-count").textContent = "No workbook loaded";
   $("#accrual-body").innerHTML = '<tr><td colspan="6" class="empty">Import an XLSX workbook to see accruals.</td></tr>';
   $("#accrual-pagination").hidden = true;
+  $("#accrual-table-scroll").classList.add("is-empty");
+  $("#review-scroll").classList.add("is-empty");
+  $("#review-pagination").hidden = true;
   $("#review-list").innerHTML = '<div class="empty">Import an XLSX workbook to see review items.</div>';
   for (const side of ["ar", "ap"]) {
     $(`#export-${side}-csv`).disabled = true;
@@ -75,6 +81,8 @@ function clearImportedResult() {
   result = undefined;
   importedSheets = undefined;
   accrualPage = 1;
+  reviewPage = 1;
+  $("#review-scroll").scrollTop = 0;
   $("#accrual-table-scroll").scrollTop = 0;
   selectedId = null;
   $("#detail-panel").classList.remove("open");
@@ -117,6 +125,7 @@ function render() {
   $("#balance-state").className = result.control.balanced ? "control good" : "control bad";
   const visible = filterAccruals(result.accruals, filters);
   const page = paginateAccruals(visible, accrualPage);
+  $("#accrual-table-scroll").classList.toggle("is-empty", !visible.length);
   accrualPage = page.page;
   $("#accrual-pagination").hidden = !visible.length;
   $("#accrual-page-status").textContent = `Showing ${page.start}–${page.end} of ${page.total} · Page ${page.page} of ${page.pages}`;
@@ -179,7 +188,17 @@ function reviewSection(item) {
 
 function renderReview() {
   const reviews = result.accruals.filter((item) => item.status === "REVIEW");
-  $("#review-list").innerHTML = reviews.length ? reviews.map((item) => `
+  const page = paginateAccruals(reviews, reviewPage);
+  if (reviewPage !== page.page) $("#review-scroll").scrollTop = 0;
+  reviewPage = page.page;
+  $("#review-scroll").classList.toggle("is-empty", !reviews.length);
+  $("#review-pagination").hidden = !reviews.length;
+  $("#review-page-status").textContent = `Showing ${page.start}–${page.end} of ${reviews.length} · Page ${page.page} of ${page.pages}`;
+  $("#review-prev").disabled = page.page === 1;
+  $("#review-next").disabled = page.page === page.pages;
+  $("#review-page-select").innerHTML = Array.from({ length: page.pages }, (_, index) => `<option value="${index + 1}">${index + 1}</option>`).join("");
+  $("#review-page-select").value = String(page.page);
+  $("#review-list").innerHTML = reviews.length ? page.items.map((item) => `
     <button class="review-card" data-id="${escapeHtml(item.id)}">
       <span class="review-icon">!</span>
       <span><strong>${escapeHtml(item.reviewTitle || handlerLabel(item.handler))} · ${escapeHtml(item.counterparty)}</strong><small>${escapeHtml(item.reviewSummary || item.description)}</small></span>
@@ -427,6 +446,20 @@ $("#accrual-page-select").addEventListener("change", event => {
   render();
   $("#accrual-table-scroll").scrollTop = 0;
   $("#accrual-page-select").focus();
+});
+for (const [id, change] of [["review-prev", -1], ["review-next", 1]]) {
+  $(`#${id}`).addEventListener("click", () => {
+    reviewPage += change;
+    renderReview();
+    $("#review-scroll").scrollTop = 0;
+    ($(`#${id}`).disabled ? $(change > 0 ? "#review-prev" : "#review-next") : $(`#${id}`)).focus();
+  });
+}
+$("#review-page-select").addEventListener("change", event => {
+  reviewPage = Number(event.target.value);
+  renderReview();
+  $("#review-scroll").scrollTop = 0;
+  $("#review-page-select").focus();
 });
 $("#close-detail").addEventListener("click", closeDetail);
 $("#overlay").addEventListener("click", closeDetail);

@@ -433,12 +433,19 @@ nav a.active b { background:#6038ef; color:#fff; }
   scroll-padding-top:4rem;
 }
 #accrual-table-scroll thead th { position:sticky; top:0; z-index:2; background:#101010; box-shadow:0 1px 0 var(--line); }
+#accrual-table-scroll.is-empty { height:auto; }
+#review-scroll { height:clamp(20rem,48vh,32rem); height:clamp(20rem,48svh,32rem); overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; border:1px solid var(--line); padding:8px; }
+#review-scroll.is-empty { height:auto; }
+#review-list { display:grid; align-content:start; }
+#review-scroll:focus-visible { outline:3px solid #ad98ff; outline-offset:-3px; }
 .accrual-pagination { padding:10px 16px; gap:10px 16px; justify-content:flex-end; }
 .accrual-pagination > span { margin-right:auto; }
 .accrual-pagination .page-buttons { display:flex; flex-wrap:nowrap; gap:8px; }
 .accrual-pagination select { min-width:4rem; padding:8px; }
 #journals .panel-head { padding:16px; }
-#journals .accrual-filters { padding:20px 16px 12px; gap:14px; }
+#journals .accrual-filters { padding:16px; gap:14px; grid-template-columns:minmax(0,2.2fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1.3fr) auto; }
+#clear-filters { white-space:nowrap; align-self:center; }
+@media(max-width:1200px) { #journals .accrual-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } #clear-filters { justify-self:start; } }
 #journals th { padding:10px 12px; }
 #accrual-body td { padding:8px 12px; }
 #accrual-body td small { margin-top:2px; line-height:1.4; }
@@ -461,3 +468,4 @@ nav a.active b { background:#6038ef; color:#fff; }
   .accrual-pagination { justify-content:space-between; }
   #journals .accrual-filters { padding:16px 12px 10px; }
 }
+@media(max-width:680px) { #journals .accrual-filters { grid-template-columns:minmax(0,1fr); } }
